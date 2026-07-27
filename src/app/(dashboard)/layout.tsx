@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   const user = {
     name: session.user.name,
     department: departmentName,
-    role: session.user.role,
+    role: session.user.role ?? undefined,
   };
 
   return (

@@ -78,7 +78,7 @@ export default async function ReportsCenterPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {reportList.map((report) => {
-          const isAllowed = report.allowedRoles.includes(userRole);
+          const isAllowed = report.allowedRoles.includes(userRole || "");
           
           return (
             <Card key={report.id} className={`transition-all ${isAllowed ? 'hover:border-primary/50 hover:shadow-md' : 'opacity-70 bg-muted/30'}`}>

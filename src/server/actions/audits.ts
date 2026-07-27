@@ -78,7 +78,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
           eq(departmentServices.departmentId, bill.departmentId)
         )
       );
-      if (service && service.phoneType === 'mobile' && service.phoneReimbursementLimit) {
+      if (service && service.phoneOwnerName && service.phoneReimbursementLimit) {
         totalLimit += service.phoneReimbursementLimit;
         hasMobilePhone = true;
       }
