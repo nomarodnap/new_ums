@@ -1,0 +1,1 @@
+ALTER TABLE "audits" DROP COLUMN "is_incomplete_receive_date";
