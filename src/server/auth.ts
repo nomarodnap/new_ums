@@ -8,7 +8,7 @@ export const auth = betterAuth({
     database: drizzleAdapter(db, {
         provider: "pg",
     }),
-    trustedOrigins: ["http://localhost:3000"],
+    trustedOrigins: ["http://localhost:3000", "https://ums.fisheries.go.th"],
     trustHost: true,
     emailAndPassword: {
         enabled: true,
@@ -60,9 +60,17 @@ export async function requireRole(allowed: Role[]) {
     redirect("/sign-in");
   }
 
-  if (!allowed.includes(session.user.role as Role)) {
+  const user = session.user as typeof session.user & { role: string };
+
+  if (!allowed.includes(user.role as Role)) {
     redirect("/unauthorized");
   }
 
-  return session;
+  return {
+    session: session.session,
+    user: {
+      ...session.user,
+      role: user.role as Role
+    }
+  };
 }
