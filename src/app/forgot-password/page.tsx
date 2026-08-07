@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap, CheckCircle2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { checkEmailExists } from "./actions";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,13 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
+      const exists = await checkEmailExists(email);
+      if (!exists) {
+        setError("ไม่พบอีเมลนี้ในระบบ");
+        setLoading(false);
+        return;
+      }
+
       const res = await authClient.requestPasswordReset({
         email,
         redirectTo: "/set-password",
