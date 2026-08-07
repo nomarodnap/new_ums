@@ -44,11 +44,9 @@ export async function getMyNotifications() {
   const myNotifs = await db.select()
     .from(notifications)
     .where(
-      user.role === "admin"
-        ? undefined
-        : user.departmentId 
-          ? or(isNull(notifications.departmentId), eq(notifications.departmentId, user.departmentId))
-          : isNull(notifications.departmentId)
+      user.departmentId 
+        ? or(isNull(notifications.departmentId), eq(notifications.departmentId, user.departmentId))
+        : isNull(notifications.departmentId)
     )
     .orderBy(desc(notifications.createdAt))
     .limit(50);
@@ -76,11 +74,9 @@ export async function markAllAsRead() {
     .where(
       and(
         eq(notifications.isRead, false),
-        user.role === "admin"
-          ? undefined
-          : user.departmentId 
-            ? or(isNull(notifications.departmentId), eq(notifications.departmentId, user.departmentId))
-            : isNull(notifications.departmentId)
+        user.departmentId 
+          ? or(isNull(notifications.departmentId), eq(notifications.departmentId, user.departmentId))
+          : isNull(notifications.departmentId)
       )
     );
 
