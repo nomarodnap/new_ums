@@ -301,10 +301,17 @@ export function BillsTable({
   };
 
   const filteredData = initialData.filter((bill) => {
+    const term = searchTerm.toLowerCase().trim();
     const matchesSearch =
-      bill.departmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.serviceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      !term ||
+      bill.billCode?.toLowerCase().includes(term) ||
+      bill.departmentName?.toLowerCase().includes(term) ||
+      bill.departmentShortName?.toLowerCase().includes(term) ||
+      bill.depositUnitName?.toLowerCase().includes(term) ||
+      bill.serviceNumber?.toLowerCase().includes(term) ||
+      bill.invoiceNumber?.toLowerCase().includes(term) ||
+      bill.paymentDocNumber?.toLowerCase().includes(term) ||
+      bill.provider?.toLowerCase().includes(term);
 
     let matchesStatus = true;
     if (statusFilter === "NOT_RECEIVED") {
@@ -374,7 +381,7 @@ export function BillsTable({
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="ค้นหาหน่วยงาน, รหัสเครื่องวัด, เลขที่ใบแจ้งหนี้..."
+            placeholder="ค้นหารหัสรายงาน, หน่วยงาน, รหัสเครื่องวัด, เลขที่ใบแจ้งหนี้..."
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

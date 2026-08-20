@@ -77,7 +77,7 @@ async function generateBillPrefix(data: {
   const costCenter = dept?.costCenterCode || "000";
   const costCenterLast3 = costCenter.slice(-3).padStart(3, "0");
 
-  return `${thaiYear}${paddedMonth}-${costCenterLast3}-${accountLastDigit}-`;
+  return `${costCenterLast3}-${thaiYear}${paddedMonth}-${accountLastDigit}-`;
 }
 
 async function generateBillCode(prefix: string): Promise<string> {
@@ -95,7 +95,7 @@ async function generateBillCode(prefix: string): Promise<string> {
     }
   }
 
-  return `${prefix}${nextSequence.toString().padStart(3, "0")}`;
+  return `${prefix}${nextSequence.toString().padStart(2, "0")}`;
 }
 
 const createBillSchema = z
@@ -618,7 +618,7 @@ export async function updateBill(prevState: any, formData: FormData) {
 
     let newBillCode = existingBill.billCode;
     const currentPrefix = existingBill.billCode
-      ? existingBill.billCode.substring(0, 11)
+      ? existingBill.billCode.substring(0, newPrefix.length)
       : "";
 
     if (!existingBill.billCode || currentPrefix !== newPrefix) {

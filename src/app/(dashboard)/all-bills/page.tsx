@@ -1,6 +1,3 @@
-import { buttonVariants } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
 import { db } from "@/server/db";
 import {
   utilityBills,
@@ -100,15 +97,6 @@ export default async function AllBillsPage() {
           <p className="text-muted-foreground mt-1">
             ดูและติดตามสถานะใบแจ้งหนี้ค่าสาธารณูปโภคของทุกหน่วยงานในระบบ
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Link
-            href="/bills/new"
-            className={buttonVariants({ variant: "default" })}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            บันทึกค่าใช้จ่ายใหม่
-          </Link>
         </div>
       </div>
 
