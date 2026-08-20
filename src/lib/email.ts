@@ -2,14 +2,18 @@ import nodemailer from "nodemailer";
 
 export async function sendEmail(to: string, subject: string, html: string) {
   // Fallback to simulation if no SMTP configuration is provided
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (
+    !process.env.SMTP_HOST ||
+    !process.env.SMTP_USER ||
+    !process.env.SMTP_PASS
+  ) {
     console.log("==========================================");
     console.log(`📩 [EMAIL SIMULATION - NO SMTP CONFIG] Sending Email...`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`Body: ${html.replace(/<[^>]*>?/gm, "")}`); // Strip HTML for console readability
     console.log("==========================================");
-    
+
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return { success: true };

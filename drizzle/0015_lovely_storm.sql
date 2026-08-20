@@ -1,0 +1,1 @@
+ALTER TABLE "utility_bills" ADD CONSTRAINT "utility_bills_bill_code_unique" UNIQUE("bill_code");

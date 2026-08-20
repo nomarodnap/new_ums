@@ -1,8 +1,11 @@
 import { z } from "zod";
 
-export const departmentTypeEnum = z.enum(["central", "regional_central", "regional"], {
-  message: "กรุณาระบุประเภทหน่วยงาน"
-});
+export const departmentTypeEnum = z.enum(
+  ["central", "regional_central", "regional"],
+  {
+    message: "กรุณาระบุประเภทหน่วยงาน",
+  },
+);
 
 export const departmentSchema = z.object({
   costCenterCode: z.string().optional().nullable(),
@@ -16,7 +19,12 @@ export const departmentSchema = z.object({
   responsiblePerson: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   responsiblePhone: z.string().optional().nullable(),
-  email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง").optional().nullable().or(z.literal("")),
+  email: z
+    .string()
+    .email("รูปแบบอีเมลไม่ถูกต้อง")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   type: departmentTypeEnum.optional().nullable(),
 });
 

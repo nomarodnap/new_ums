@@ -29,7 +29,10 @@ export async function createDepartment(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { success: false as const, error: parsed.error.flatten().fieldErrors };
+    return {
+      success: false as const,
+      error: parsed.error.flatten().fieldErrors,
+    };
   }
 
   try {
@@ -37,7 +40,7 @@ export async function createDepartment(formData: FormData) {
       id: crypto.randomUUID(),
       ...parsed.data,
     });
-    
+
     revalidatePath("/departments");
     return { success: true as const };
   } catch (error) {
@@ -65,14 +68,18 @@ export async function updateDepartment(id: string, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { success: false as const, error: parsed.error.flatten().fieldErrors };
+    return {
+      success: false as const,
+      error: parsed.error.flatten().fieldErrors,
+    };
   }
 
   try {
-    await db.update(departments)
+    await db
+      .update(departments)
       .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(departments.id, id));
-      
+
     revalidatePath("/departments");
     return { success: true as const };
   } catch (error) {

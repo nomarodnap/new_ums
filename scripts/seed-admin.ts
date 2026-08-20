@@ -16,8 +16,8 @@ async function seedAdmin() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "origin": "http://localhost:3000",
-        "host": "localhost:3000"
+        origin: "http://localhost:3000",
+        host: "localhost:3000",
       },
       body: JSON.stringify({
         email,
@@ -27,7 +27,7 @@ async function seedAdmin() {
     });
 
     const data = await res.json();
-    
+
     if (!res.ok) {
       if (data.message?.includes("already exists")) {
         console.log("User already exists, proceeding to update role...");
@@ -40,9 +40,7 @@ async function seedAdmin() {
 
     // 2. Set the user's role to 'admin' using Drizzle
     console.log("Updating role to 'admin' in the database...");
-    await db.update(user)
-      .set({ role: "admin" })
-      .where(eq(user.email, email));
+    await db.update(user).set({ role: "admin" }).where(eq(user.email, email));
 
     console.log("✅ Admin user seeded successfully!");
     console.log("-----------------------------------------");
@@ -50,7 +48,6 @@ async function seedAdmin() {
     console.log(`Password: ${password}`);
     console.log("-----------------------------------------");
     process.exit(0);
-
   } catch (error) {
     console.error("❌ Error seeding admin:", error);
     process.exit(1);

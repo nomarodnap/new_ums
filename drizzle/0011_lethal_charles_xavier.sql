@@ -1,0 +1,1 @@
+ALTER TABLE "utility_bills" ADD COLUMN "service_breakdown" text;

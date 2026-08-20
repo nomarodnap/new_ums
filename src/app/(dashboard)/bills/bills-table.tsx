@@ -3,8 +3,15 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteBill, markBillAsReviewed, getBillLogs } from "@/server/actions/bills";
-import { flagManualAnomaly, unflagManualAnomaly } from "@/server/actions/audits";
+import {
+  deleteBill,
+  markBillAsReviewed,
+  getBillLogs,
+} from "@/server/actions/bills";
+import {
+  flagManualAnomaly,
+  unflagManualAnomaly,
+} from "@/server/actions/audits";
 import {
   Table,
   TableBody,
@@ -16,16 +23,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Zap, 
-  Droplet, 
-  Phone, 
-  Wifi, 
-  Mail, 
-  MoreHorizontal, 
-  Search, 
-  Eye, 
-  Edit, 
+import {
+  Zap,
+  Droplet,
+  Phone,
+  Wifi,
+  Mail,
+  MoreHorizontal,
+  Search,
+  Eye,
+  Edit,
   Trash2,
   FileText,
   Building2,
@@ -35,7 +42,7 @@ import {
   Banknote,
   Flag,
   CheckCircle2,
-  Clock
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -48,7 +55,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -76,6 +89,8 @@ import {
 import { toast } from "sonner";
 type Bill = {
   id: string;
+  billCode: string | null;
+  departmentId?: string | null;
   utilityType: string;
   billingMonth: number;
   billingYear: number;
@@ -88,6 +103,7 @@ type Bill = {
   departmentType: string | null;
   provider: string | null;
   serviceNumber: string | null;
+  serviceBreakdown?: string | null;
   invoiceNumber: string | null;
   invoiceDate: Date | null;
   receivedDate: Date | null;
@@ -112,6 +128,7 @@ type Bill = {
   isOverdueMoreThan2Months?: boolean | null;
   isWrongMonth?: boolean | null;
   isPhoneOverLimit?: boolean | null;
+  isPhoneUsageOverLimit?: boolean | null;
   isWrongBudget?: boolean | null;
   isDuplicate?: boolean | null;
   isManualAnomaly?: boolean | null;
@@ -125,7 +142,17 @@ type Bill = {
   depositUnitName?: string | null;
 };
 
-export function BillsTable({ initialData, showAuditStatus = false, userRole }: { initialData: Bill[], showAuditStatus?: boolean, userRole?: string }) {
+export function BillsTable({
+  initialData,
+  services = [],
+  showAuditStatus = false,
+  userRole,
+}: {
+  initialData: Bill[];
+  services?: any[];
+  showAuditStatus?: boolean;
+  userRole?: string;
+}) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ทุกสถานะ");
@@ -134,7 +161,7 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
   const [yearFilter, setYearFilter] = useState("ทุกปี");
   const [anomalyFilter, setAnomalyFilter] = useState("ทั้งหมด");
   const [reviewFilter, setReviewFilter] = useState("ทั้งหมด");
-  
+
   const [isPending, startTransition] = useTransition();
   const [billToDelete, setBillToDelete] = useState<string | null>(null);
   const [billToView, setBillToView] = useState<any>(null);
@@ -151,10 +178,12 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
     if (bill.isLatePayment) issues.push("เบิกจ่ายล่าช้า");
     if (bill.isOverdueMoreThan2Months) issues.push("ค้างชำระเกิน 2 เดือน");
     if (bill.isWrongMonth) issues.push("เบิกจ่ายผิดเดือน");
-    if (bill.isPhoneOverLimit) issues.push("ค่าโทรศัพท์เกินเกณฑ์");
+    if (bill.isPhoneUsageOverLimit) issues.push("ใช้ค่าโทรศัพท์เกินเกณฑ์");
+    if (bill.isPhoneOverLimit) issues.push("เบิกค่าโทรศัพท์เกินเกณฑ์");
     if (bill.isWrongBudget) issues.push("เบิกจ่ายผิดงบประมาณ");
     if (bill.isDuplicate) issues.push("เบิกจ่ายซ้ำซ้อน");
-    if (bill.isManualAnomaly) issues.push(bill.manualAnomalyReason || "ระบุว่าผิดปกติ");
+    if (bill.isManualAnomaly)
+      issues.push(bill.manualAnomalyReason || "ระบุว่าผิดปกติ");
     return issues;
   };
 
@@ -250,40 +279,51 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
 
   const getUtilityIcon = (type: string) => {
     switch (type) {
-      case "ค่าไฟฟ้า": return <Zap className="h-4 w-4 text-yellow-500" />;
-      case "ค่าประปา&น้ำบาดาล": return <Droplet className="h-4 w-4 text-blue-500" />;
-      case "ค่าโทรศัพท์": return <Phone className="h-4 w-4 text-green-500" />;
-      case "ค่าสื่อสาร&โทรคมนาคม": return <Wifi className="h-4 w-4 text-purple-500" />;
-      case "ค่าบริการไปรษณีย์": return <Mail className="h-4 w-4 text-orange-500" />;
-      default: return <FileText className="h-4 w-4 text-muted-foreground" />;
+      case "ค่าไฟฟ้า":
+        return <Zap className="h-4 w-4 text-yellow-500" />;
+      case "ค่าประปา&น้ำบาดาล":
+        return <Droplet className="h-4 w-4 text-blue-500" />;
+      case "ค่าโทรศัพท์":
+        return <Phone className="h-4 w-4 text-green-500" />;
+      case "ค่าสื่อสาร&โทรคมนาคม":
+        return <Wifi className="h-4 w-4 text-purple-500" />;
+      case "ค่าบริการไปรษณีย์":
+        return <Mail className="h-4 w-4 text-orange-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getMonthName = (monthNum: number) => {
     const d = new Date();
     d.setMonth(monthNum - 1);
-    return format(d, 'MMM', { locale: th });
+    return format(d, "MMM", { locale: th });
   };
 
-  const filteredData = initialData.filter(bill => {
-    const matchesSearch = 
-      (bill.departmentName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (bill.serviceNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (bill.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+  const filteredData = initialData.filter((bill) => {
+    const matchesSearch =
+      bill.departmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bill.serviceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bill.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+
     let matchesStatus = true;
     if (statusFilter === "NOT_RECEIVED") {
       matchesStatus = bill.invoiceStatus === "NOT_RECEIVED";
     } else if (statusFilter === "PENDING") {
-      matchesStatus = bill.paymentStatus === "PENDING" && bill.invoiceStatus !== "NOT_RECEIVED";
+      matchesStatus =
+        bill.paymentStatus === "PENDING" &&
+        bill.invoiceStatus !== "NOT_RECEIVED";
     } else if (statusFilter === "PAID") {
       matchesStatus = bill.paymentStatus === "PAID";
     }
 
-    const matchesUtility = utilityFilter === "ทุกประเภท" || bill.utilityType === utilityFilter;
-    
-    const matchesMonth = monthFilter === "ทุกเดือน" || bill.billingMonth.toString() === monthFilter;
-    const matchesYear = yearFilter === "ทุกปี" || bill.billingYear.toString() === yearFilter;
+    const matchesUtility =
+      utilityFilter === "ทุกประเภท" || bill.utilityType === utilityFilter;
+
+    const matchesMonth =
+      monthFilter === "ทุกเดือน" || bill.billingMonth.toString() === monthFilter;
+    const matchesYear =
+      yearFilter === "ทุกปี" || bill.billingYear.toString() === yearFilter;
 
     let matchesAnomaly = true;
     if (anomalyFilter === "พบความผิดปกติ") {
@@ -299,14 +339,32 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
       matchesReview = !!bill.isReviewed;
     }
 
-    return matchesSearch && matchesStatus && matchesUtility && matchesMonth && matchesYear && matchesAnomaly && matchesReview;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesUtility &&
+      matchesMonth &&
+      matchesYear &&
+      matchesAnomaly &&
+      matchesReview
+    );
   });
 
   const THAI_MONTHS = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
   ];
-  
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
@@ -322,23 +380,33 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
-          <Select value={monthFilter} onValueChange={(v) => v && setMonthFilter(v)}>
+          <Select
+            value={monthFilter}
+            onValueChange={(v) => v && setMonthFilter(v)}
+          >
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="เดือน">
-                {monthFilter === "ทุกเดือน" ? "ทุกเดือน" : THAI_MONTHS[parseInt(monthFilter) - 1]}
+                {monthFilter === "ทุกเดือน"
+                  ? "ทุกเดือน"
+                  : THAI_MONTHS[parseInt(monthFilter) - 1]}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ทุกเดือน">ทุกเดือน</SelectItem>
               {THAI_MONTHS.map((m, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                  {m}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={yearFilter} onValueChange={(v) => v && setYearFilter(v)}>
+          <Select
+            value={yearFilter}
+            onValueChange={(v) => v && setYearFilter(v)}
+          >
             <SelectTrigger className="w-[100px]">
               <SelectValue placeholder="ปี">
                 {yearFilter === "ทุกปี" ? "ทุกปี" : parseInt(yearFilter) + 543}
@@ -347,33 +415,46 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
             <SelectContent>
               <SelectItem value="ทุกปี">ทุกปี</SelectItem>
               {years.map((y) => (
-                <SelectItem key={y} value={y.toString()}>{y + 543}</SelectItem>
+                <SelectItem key={y} value={y.toString()}>
+                  {y + 543}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={utilityFilter} onValueChange={(v) => v && setUtilityFilter(v)}>
+          <Select
+            value={utilityFilter}
+            onValueChange={(v) => v && setUtilityFilter(v)}
+          >
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="ประเภท">
-                {utilityFilter}
-              </SelectValue>
+              <SelectValue placeholder="ประเภท">{utilityFilter}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ทุกประเภท">ทุกประเภท</SelectItem>
               <SelectItem value="ค่าไฟฟ้า">ค่าไฟฟ้า</SelectItem>
               <SelectItem value="ค่าประปา&น้ำบาดาล">ค่าประปา&น้ำบาดาล</SelectItem>
               <SelectItem value="ค่าโทรศัพท์">ค่าโทรศัพท์</SelectItem>
-              <SelectItem value="ค่าสื่อสาร&โทรคมนาคม">ค่าสื่อสาร&โทรคมนาคม</SelectItem>
+              <SelectItem value="ค่าสื่อสาร&โทรคมนาคม">
+                ค่าสื่อสาร&โทรคมนาคม
+              </SelectItem>
               <SelectItem value="ค่าบริการไปรษณีย์">ค่าบริการไปรษณีย์</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => v && setStatusFilter(v)}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="สถานะ">
-                {statusFilter === "ทุกสถานะ" ? "ทุกสถานะ" :
-                 statusFilter === "NOT_RECEIVED" ? "ยังไม่ได้รับใบแจ้งหนี้" :
-                 statusFilter === "PENDING" ? "ยังไม่ได้เบิกจ่าย" :
-                 statusFilter === "PAID" ? "เบิกจ่ายแล้ว" : statusFilter}
+                {statusFilter === "ทุกสถานะ"
+                  ? "ทุกสถานะ"
+                  : statusFilter === "NOT_RECEIVED"
+                    ? "ยังไม่ได้รับใบแจ้งหนี้"
+                    : statusFilter === "PENDING"
+                      ? "ยังไม่ได้เบิกจ่าย"
+                      : statusFilter === "PAID"
+                        ? "เบิกจ่ายแล้ว"
+                        : statusFilter}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -384,7 +465,10 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
             </SelectContent>
           </Select>
 
-          <Select value={anomalyFilter} onValueChange={(v) => v && setAnomalyFilter(v)}>
+          <Select
+            value={anomalyFilter}
+            onValueChange={(v) => v && setAnomalyFilter(v)}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="สถานะความผิดปกติ">
                 {anomalyFilter === "ทั้งหมด" ? "สถานะความผิดปกติ" : anomalyFilter}
@@ -397,7 +481,10 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
             </SelectContent>
           </Select>
 
-          <Select value={reviewFilter} onValueChange={(v) => v && setReviewFilter(v)}>
+          <Select
+            value={reviewFilter}
+            onValueChange={(v) => v && setReviewFilter(v)}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="สถานะการตรวจสอบ">
                 {reviewFilter === "ทั้งหมด" ? "สถานะการตรวจสอบ" : reviewFilter}
@@ -417,27 +504,38 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="w-[220px]">หน่วยงาน / ประเภท</TableHead>
-              <TableHead>รหัสเครื่องวัด / ใบแจ้งหนี้</TableHead>
+              <TableHead>รหัสรายงาน / เครื่องวัด</TableHead>
               <TableHead>รอบบิล</TableHead>
               <TableHead className="text-right">ยอดชำระ / เบิกจ่าย</TableHead>
               <TableHead className="text-center">สถานะการเบิกจ่าย</TableHead>
-              {showAuditStatus && <TableHead className="text-center">สถานะตรวจสอบ</TableHead>}
+              {showAuditStatus && (
+                <TableHead className="text-center">สถานะตรวจสอบ</TableHead>
+              )}
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={showAuditStatus ? 7 : 6} className="text-center h-32 text-muted-foreground">
+                <TableCell
+                  colSpan={showAuditStatus ? 7 : 6}
+                  className="text-center h-32 text-muted-foreground"
+                >
                   ไม่มีข้อมูลค่าใช้จ่าย
                 </TableCell>
               </TableRow>
             )}
             {filteredData.map((bill) => (
-              <TableRow key={bill.id} className="hover:bg-muted/50 transition-colors group">
+              <TableRow
+                key={bill.id}
+                className="hover:bg-muted/50 transition-colors group"
+              >
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium truncate max-w-[230px]" title={bill.departmentName || "ไม่ระบุหน่วยงาน"}>
+                    <span
+                      className="font-medium truncate max-w-[230px]"
+                      title={bill.departmentName || "ไม่ระบุหน่วยงาน"}
+                    >
                       {bill.departmentName || "ไม่ระบุหน่วยงาน"}
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mt-1">
@@ -446,8 +544,12 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                         <span>{bill.utilityType}</span>
                       </div>
                       {bill.isPendingBillOnly && (
-                        <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-medium truncate max-w-[150px]" title={`ฝากเบิก: ${bill.depositUnitName || bill.depositUnitId || "-"}`}>
-                          ฝากเบิก: {bill.depositUnitName || bill.depositUnitId || "-"}
+                        <span
+                          className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-medium truncate max-w-[150px]"
+                          title={`ฝากเบิก: ${bill.depositUnitName || bill.depositUnitId || "-"}`}
+                        >
+                          ฝากเบิก:{" "}
+                          {bill.depositUnitName || bill.depositUnitId || "-"}
                         </span>
                       )}
                     </div>
@@ -455,62 +557,94 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col space-y-1">
+                    {bill.billCode && (
+                      <span className="text-xs font-semibold text-primary/80 mb-0.5 border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5 w-fit">
+                        {bill.billCode}
+                      </span>
+                    )}
                     {bill.serviceNumber ? (
-                      <span className="text-sm font-medium">{bill.serviceNumber}</span>
+                      <span className="text-sm font-medium">
+                        {bill.serviceNumber}
+                      </span>
                     ) : (
                       <span className="text-sm text-muted-foreground">-</span>
                     )}
                     <div className="flex items-center gap-2 mt-1">
                       {bill.invoiceNumber && (
-                        <span className="text-xs text-muted-foreground">INV: {bill.invoiceNumber}</span>
+                        <span className="text-xs text-muted-foreground">
+                          INV: {bill.invoiceNumber}
+                        </span>
                       )}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col space-y-1">
-                    <span className="font-medium">{getMonthName(bill.billingMonth)} {bill.billingYear + 543}</span>
+                    <span className="font-medium">
+                      {getMonthName(bill.billingMonth)} {bill.billingYear + 543}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-col space-y-1 items-end">
                     <span className="font-medium text-sm">
-                      {bill.invoiceAmount ? Number(bill.invoiceAmount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                      {bill.invoiceAmount
+                        ? Number(bill.invoiceAmount).toLocaleString("th-TH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "-"}
                     </span>
                     {bill.usageAmount && (
                       <span className="text-[10px] text-muted-foreground">
-                        {Number(bill.usageAmount).toLocaleString('th-TH')} หน่วย
+                        {Number(bill.usageAmount).toLocaleString("th-TH")} หน่วย
                       </span>
                     )}
-                    {bill.paymentStatus === 'PAID' && bill.paidAmount && (
+                    {bill.paymentStatus === "PAID" && bill.paidAmount && (
                       <span className="text-xs text-green-600 dark:text-green-400">
-                        จ่าย: {Number(bill.paidAmount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        จ่าย:{" "}
+                        {Number(bill.paidAmount).toLocaleString("th-TH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                     )}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex flex-col items-center space-y-1">
-                    <Badge 
-                      variant={bill.invoiceStatus === "NOT_RECEIVED" ? "outline" : bill.paymentStatus === "PAID" ? "default" : "outline"}
+                    <Badge
+                      variant={
+                        bill.invoiceStatus === "NOT_RECEIVED"
+                          ? "outline"
+                          : bill.paymentStatus === "PAID"
+                            ? "default"
+                            : "outline"
+                      }
                       className={
-                        bill.invoiceStatus === "NOT_RECEIVED" 
+                        bill.invoiceStatus === "NOT_RECEIVED"
                           ? "text-slate-400 border-slate-200"
-                          : bill.paymentStatus === "PAID" 
-                            ? "bg-green-600 hover:bg-green-700" 
+                          : bill.paymentStatus === "PAID"
+                            ? "bg-green-600 hover:bg-green-700"
                             : "text-amber-600 border-amber-200"
                       }
                     >
-                      {bill.invoiceStatus === "NOT_RECEIVED" ? "ยังไม่ได้รับใบแจ้งหนี้" : bill.paymentStatus === "PAID" ? "เบิกจ่ายแล้ว" : "ยังไม่ได้เบิกจ่าย"}
+                      {bill.invoiceStatus === "NOT_RECEIVED"
+                        ? "ยังไม่ได้รับใบแจ้งหนี้"
+                        : bill.paymentStatus === "PAID"
+                          ? "เบิกจ่ายแล้ว"
+                          : "ยังไม่ได้เบิกจ่าย"}
                     </Badge>
-                    {(bill.invoiceStatus === "NOT_RECEIVED" || bill.paymentStatus === "PENDING") && (
+                    {(bill.invoiceStatus === "NOT_RECEIVED" ||
+                      bill.paymentStatus === "PENDING") && (
                       <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded font-medium shadow-sm">
                         ค้างชำระ
                       </span>
                     )}
-                    {bill.paymentStatus === 'PAID' && bill.paymentDocNumber && (
+                    {bill.paymentStatus === "PAID" && bill.paymentDocNumber && (
                       <span className="text-[10px] text-muted-foreground mt-1 bg-muted px-1.5 py-0.5 rounded border">
-                        {bill.docType ? `${bill.docType} ` : ''}{bill.paymentDocNumber}
+                        {bill.docType ? `${bill.docType} ` : ""}
+                        {bill.paymentDocNumber}
                       </span>
                     )}
                   </div>
@@ -520,7 +654,10 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                     <div className="flex flex-col items-center justify-center gap-1.5">
                       {bill.auditStatus === "PENDING_CORRECTION" ? (
                         <>
-                          <Badge variant="outline" className="bg-amber-100 text-amber-700 whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-100 text-amber-700 whitespace-nowrap"
+                          >
                             พบข้อสังเกต
                           </Badge>
                           {getAuditIssueTexts(bill).length > 0 && (
@@ -532,19 +669,28 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                           )}
                         </>
                       ) : (
-                        <Badge 
-                          variant={!bill.auditStatus || bill.auditStatus === "CORRECTED" ? "secondary" : "outline"} 
+                        <Badge
+                          variant={
+                            !bill.auditStatus ||
+                            bill.auditStatus === "CORRECTED"
+                              ? "secondary"
+                              : "outline"
+                          }
                           className={
-                            !bill.auditStatus ? "bg-green-100 text-green-700 whitespace-nowrap" :
-                            "bg-blue-100 text-blue-700 whitespace-nowrap"
+                            !bill.auditStatus
+                              ? "bg-green-100 text-green-700 whitespace-nowrap"
+                              : "bg-blue-100 text-blue-700 whitespace-nowrap"
                           }
                         >
                           {!bill.auditStatus ? "ปกติ" : "แก้ไขแล้ว"}
                         </Badge>
                       )}
-                      
+
                       {bill.isReviewed && (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-1.5 py-0">
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-1.5 py-0"
+                        >
                           ตรวจสอบแล้ว
                         </Badge>
                       )}
@@ -553,9 +699,14 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                 )}
                 <TableCell>
                   <DropdownMenu>
-                    <DropdownMenuTrigger render={
-                      <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" />
-                    }>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                        />
+                      }
+                    >
                       <span className="sr-only">เปิดเมนู</span>
                       <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
@@ -563,20 +714,20 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                       <DropdownMenuGroup>
                         <DropdownMenuLabel>การจัดการ</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="cursor-pointer"
                           onClick={() => handleView(bill)}
                         >
                           <Eye className="mr-2 h-4 w-4" /> ดูรายละเอียด
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer" 
+                        <DropdownMenuItem
+                          className="cursor-pointer"
                           render={<Link href={`/bills/${bill.id}/edit`} />}
                         >
                           <Edit className="mr-2 h-4 w-4" /> อัพเดทข้อมูล
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="cursor-pointer text-destructive focus:text-destructive"
                           onClick={() => setBillToDelete(bill.id)}
                         >
@@ -592,17 +743,21 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
         </Table>
       </div>
 
-      <AlertDialog open={!!billToDelete} onOpenChange={(open) => !open && setBillToDelete(null)}>
+      <AlertDialog
+        open={!!billToDelete}
+        onOpenChange={(open) => !open && setBillToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบรายการ?</AlertDialogTitle>
             <AlertDialogDescription>
-              การดำเนินการนี้ไม่สามารถเรียกคืนได้ ข้อมูลบิลและไฟล์แนบที่เกี่ยวข้องจะถูกลบออกจากระบบอย่างถาวร
+              การดำเนินการนี้ไม่สามารถเรียกคืนได้
+              ข้อมูลบิลและไฟล์แนบที่เกี่ยวข้องจะถูกลบออกจากระบบอย่างถาวร
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
@@ -624,57 +779,97 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
               รายละเอียดรายการค่าใช้จ่าย
             </DialogTitle>
             <DialogDescription>
-              ข้อมูลบิลประจำเดือน {billToView && getMonthName(billToView.billingMonth)} {billToView && billToView.billingYear + 543}
+              ข้อมูลบิลประจำเดือน{" "}
+              {billToView && getMonthName(billToView.billingMonth)}{" "}
+              {billToView && billToView.billingYear + 543}
             </DialogDescription>
           </DialogHeader>
-          
+
           {billToView && (
             <Tabs defaultValue="details" className="w-full mt-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="details">รายละเอียด</TabsTrigger>
                 <TabsTrigger value="history">ประวัติการทำรายการ</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="details" className="mt-4">
                 <div className="space-y-6">
                   {/* Group 1: ข้อมูลทั่วไป */}
                   <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
                     <div className="flex items-center gap-2 border-b pb-3">
                       <Building2 className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg tracking-tight">ข้อมูลทั่วไป</h3>
+                      <h3 className="font-semibold text-lg tracking-tight">
+                        ข้อมูลทั่วไป
+                      </h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">หน่วยงาน</p>
-                        <p className="bg-muted/50 p-2 rounded-md">{billToView.departmentName || "-"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">อักษรย่อ</p>
-                        <p className="bg-muted/50 p-2 rounded-md">{billToView.departmentShortName || "-"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">รหัสศูนย์ต้นทุน</p>
-                        <p className="bg-muted/50 p-2 rounded-md">{billToView.departmentCostCenter || "-"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ระดับหน่วยงาน</p>
-                        <p className="bg-muted/50 p-2 rounded-md">
-                          {billToView.departmentType === 'central' ? 'ส่วนกลาง' : 
-                           billToView.departmentType === 'regional_central' ? 'ส่วนภูมิภาค (ส่วนกลาง)' : 
-                           billToView.departmentType === 'regional' ? 'ส่วนภูมิภาค' : (billToView.departmentType || "-")}
+                        <p className="text-muted-foreground text-sm font-medium">
+                          รหัสรายงาน
+                        </p>
+                        <p className="bg-primary/10 text-primary p-2 rounded-md font-semibold font-mono">
+                          {billToView.billCode || "-"}
                         </p>
                       </div>
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ประเภทการเบิกจ่าย</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          หน่วยงาน
+                        </p>
                         <p className="bg-muted/50 p-2 rounded-md">
-                          {billToView.isPendingBillOnly ? "หน่วยงานฝากเบิก" : "หน่วยงานที่เบิกจ่าย"}
+                          {billToView.departmentName || "-"}
                         </p>
                       </div>
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ฝากเบิกกับหน่วยงาน</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          อักษรย่อ
+                        </p>
                         <p className="bg-muted/50 p-2 rounded-md">
-                          {billToView.isPendingBillOnly ? (billToView.depositUnitName || billToView.depositUnitId || "-") : "-"}
+                          {billToView.departmentShortName || "-"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          รหัสศูนย์ต้นทุน
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.departmentCostCenter || "-"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ระดับหน่วยงาน
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.departmentType === "central"
+                            ? "ส่วนกลาง"
+                            : billToView.departmentType === "regional_central"
+                              ? "ส่วนภูมิภาค (ส่วนกลาง)"
+                              : billToView.departmentType === "regional"
+                                ? "ส่วนภูมิภาค"
+                                : billToView.departmentType || "-"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ประเภทการเบิกจ่าย
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.isPendingBillOnly
+                            ? "หน่วยงานฝากเบิก"
+                            : "หน่วยงานที่เบิกจ่าย"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ฝากเบิกกับหน่วยงาน
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.isPendingBillOnly
+                            ? billToView.depositUnitName ||
+                              billToView.depositUnitId ||
+                              "-"
+                            : "-"}
                         </p>
                       </div>
                     </div>
@@ -684,42 +879,80 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
                     <div className="flex items-center gap-2 border-b pb-3">
                       <Receipt className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg tracking-tight">ใบแจ้งหนี้ค่าสาธารณูปโภค</h3>
+                      <h3 className="font-semibold text-lg tracking-tight">
+                        ใบแจ้งหนี้ค่าสาธารณูปโภค
+                      </h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ประเภทสาธารณูปโภค</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ประเภทสาธารณูปโภค
+                        </p>
                         <p className="bg-muted/50 p-2 rounded-md flex items-center gap-1.5">
                           {getUtilityIcon(billToView.utilityType)}
                           {billToView.utilityType || "-"}
                         </p>
                       </div>
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">หมายเลขผู้ใช้ / รหัสเครื่องวัด</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          หมายเลขผู้ใช้ / รหัสเครื่องวัด
+                        </p>
                         <div className="flex flex-wrap gap-2">
-                          {billToView.serviceNumber ? billToView.serviceNumber.split(',').map((s: string) => s.trim()).filter(Boolean).map((sn: string) => (
-                            <Badge key={sn} variant="secondary" className="px-3 py-1 text-sm bg-muted text-foreground">{sn}</Badge>
-                          )) : <p className="bg-muted/50 p-2 rounded-md w-full">-</p>}
+                          {billToView.serviceNumber ? (
+                            billToView.serviceNumber
+                              .split(",")
+                              .map((s: string) => s.trim())
+                              .filter(Boolean)
+                              .map((sn: string) => (
+                                <Badge
+                                  key={sn}
+                                  variant="secondary"
+                                  className="px-3 py-1 text-sm bg-muted text-foreground"
+                                >
+                                  {sn}
+                                </Badge>
+                              ))
+                          ) : (
+                            <p className="bg-muted/50 p-2 rounded-md w-full">
+                              -
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ผู้ให้บริการ</p>
-                        <p className="bg-muted/50 p-2 rounded-md">{billToView.provider || "-"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ที่ตั้ง</p>
-                        <p className="bg-muted/50 p-2 rounded-md">{billToView.locationType || "-"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">รอบบิลประจำเดือน</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ผู้ให้บริการ
+                        </p>
                         <p className="bg-muted/50 p-2 rounded-md">
-                          {billToView.billingMonth && billToView.billingYear ? `${getMonthName(billToView.billingMonth)} ${billToView.billingYear + 543}` : "-"}
+                          {billToView.provider || "-"}
                         </p>
                       </div>
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">ค่าใช้จ่ายโดยประมาณการ</p>
-                        <p className="bg-muted/50 p-2 rounded-md text-muted-foreground italic">(คำนวณอัตโนมัติในฟอร์ม)</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ที่ตั้ง
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.locationType || "-"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          รอบบิลประจำเดือน
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md">
+                          {billToView.billingMonth && billToView.billingYear
+                            ? `${getMonthName(billToView.billingMonth)} ${billToView.billingYear + 543}`
+                            : "-"}
+                        </p>
+                      </div>
+                      <div className="grid gap-1">
+                        <p className="text-muted-foreground text-sm font-medium">
+                          ค่าใช้จ่ายโดยประมาณการ
+                        </p>
+                        <p className="bg-muted/50 p-2 rounded-md text-muted-foreground italic">
+                          (คำนวณอัตโนมัติในฟอร์ม)
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -728,68 +961,252 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
                     <div className="flex items-center gap-2 border-b pb-3">
                       <CalendarClock className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg tracking-tight">การรับใบแจ้งหนี้</h3>
+                      <h3 className="font-semibold text-lg tracking-tight">
+                        การรับใบแจ้งหนี้
+                      </h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                       <div className="grid gap-1 md:col-span-2">
-                        <p className="text-muted-foreground text-sm font-medium">สถานะใบแจ้งหนี้</p>
-                        <Badge variant={billToView.invoiceStatus === 'RECEIVED' ? 'default' : 'outline'} className="mt-1 w-fit">
-                          {billToView.invoiceStatus === 'RECEIVED' ? 'ได้รับใบแจ้งหนี้แล้ว' : 'ยังไม่ได้รับใบแจ้งหนี้'}
+                        <p className="text-muted-foreground text-sm font-medium">
+                          สถานะใบแจ้งหนี้
+                        </p>
+                        <Badge
+                          variant={
+                            billToView.invoiceStatus === "RECEIVED"
+                              ? "default"
+                              : "outline"
+                          }
+                          className="mt-1 w-fit"
+                        >
+                          {billToView.invoiceStatus === "RECEIVED"
+                            ? "ได้รับใบแจ้งหนี้แล้ว"
+                            : "ยังไม่ได้รับใบแจ้งหนี้"}
                         </Badge>
                       </div>
 
-                      {billToView.invoiceStatus === 'RECEIVED' && (
+                      {billToView.invoiceStatus === "RECEIVED" && (
                         <>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">วันที่ใบแจ้งหนี้</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              วันที่ใบแจ้งหนี้
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.invoiceDate ? format(new Date(billToView.invoiceDate), 'dd/MM/yyyy') : "-"}
+                              {billToView.invoiceDate
+                                ? format(
+                                    new Date(billToView.invoiceDate),
+                                    "dd/MM/yyyy",
+                                  )
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">วันที่ลงรับใบแจ้งหนี้</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              วันที่ลงรับใบแจ้งหนี้
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.receivedDate ? format(new Date(billToView.receivedDate), 'dd/MM/yyyy') : "-"}
+                              {billToView.receivedDate
+                                ? format(
+                                    new Date(billToView.receivedDate),
+                                    "dd/MM/yyyy",
+                                  )
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">หน่วยฝากเบิกส่งเอกสาร</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              หน่วยฝากเบิกส่งเอกสาร
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.sentToDisbursingDate ? format(new Date(billToView.sentToDisbursingDate), 'dd/MM/yyyy') : "-"}
+                              {billToView.sentToDisbursingDate
+                                ? format(
+                                    new Date(billToView.sentToDisbursingDate),
+                                    "dd/MM/yyyy",
+                                  )
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">วันที่หน่วยเบิกจ่ายลงรับใบแจ้งหนี้</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              วันที่หน่วยเบิกจ่ายลงรับใบแจ้งหนี้
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.disbursingReceivedDate ? format(new Date(billToView.disbursingReceivedDate), 'dd/MM/yyyy') : "-"}
+                              {billToView.disbursingReceivedDate
+                                ? format(
+                                    new Date(billToView.disbursingReceivedDate),
+                                    "dd/MM/yyyy",
+                                  )
+                                : "-"}
                             </p>
                           </div>
+                          {/* Service Breakdown */}
+                          {(() => {
+                            if (!billToView.serviceBreakdown) return null;
+                            try {
+                              const breakdown =
+                                typeof billToView.serviceBreakdown === "string"
+                                  ? JSON.parse(billToView.serviceBreakdown)
+                                  : billToView.serviceBreakdown;
+                              if (!breakdown || typeof breakdown !== "object")
+                                return null;
+                              const entries = Object.entries(breakdown);
+                              if (entries.length === 0) return null;
+
+                              return (
+                                <div className="grid gap-2 md:col-span-2 rounded-lg border bg-muted/20 p-3.5 mt-1">
+                                  <div className="flex items-center justify-between border-b pb-2">
+                                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                      <span>
+                                        รายละเอียดจำนวนเงินแยกรายหมายเลข (Service
+                                        Breakdown)
+                                      </span>
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px] font-normal py-0 px-1.5"
+                                      >
+                                        {entries.length} หมายเลข
+                                      </Badge>
+                                    </p>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                                    {entries.map(([num, amt]) => {
+                                      const numVal = parseFloat(String(amt));
+                                      const svcInfo =
+                                        services?.find(
+                                          (s) =>
+                                            s.serviceNumber === num &&
+                                            (!billToView.departmentId ||
+                                              s.departmentId ===
+                                                billToView.departmentId),
+                                        ) ||
+                                        services?.find(
+                                          (s) => s.serviceNumber === num,
+                                        );
+
+                                      const isItemOverLimit =
+                                        billToView.utilityType === "ค่าโทรศัพท์" &&
+                                        svcInfo?.phoneReimbursementLimit &&
+                                        !isNaN(numVal) &&
+                                        numVal >
+                                          svcInfo.phoneReimbursementLimit;
+
+                                      return (
+                                        <div
+                                          key={num}
+                                          className={`bg-background p-2.5 rounded-md border text-xs flex flex-col justify-between shadow-2xs ${isItemOverLimit ? "border-amber-500/60 bg-amber-50/20 dark:bg-amber-950/10" : ""}`}
+                                        >
+                                          <div>
+                                            <div className="flex items-center justify-between gap-1 mb-1">
+                                              <span className="text-muted-foreground font-medium truncate">
+                                                หมายเลข:{" "}
+                                                <span className="text-foreground font-semibold">
+                                                  {num}
+                                                </span>
+                                                {svcInfo?.phoneOwnerName && (
+                                                  <span className="text-muted-foreground ml-1 font-normal">
+                                                    ({svcInfo.phoneOwnerName})
+                                                  </span>
+                                                )}
+                                              </span>
+                                              {svcInfo?.phoneReimbursementLimit && (
+                                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-normal shrink-0">
+                                                  สิทธิ: ฿
+                                                  {svcInfo.phoneReimbursementLimit.toLocaleString()}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="mt-1">
+                                            <div className="flex items-baseline justify-between">
+                                              <span className="text-[11px] text-muted-foreground">
+                                                ยอดตามบิล:
+                                              </span>
+                                              <span className="text-primary font-semibold text-sm">
+                                                {!isNaN(numVal)
+                                                  ? `฿${numVal.toLocaleString(
+                                                      "th-TH",
+                                                      {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                      },
+                                                    )}`
+                                                  : "-"}
+                                              </span>
+                                            </div>
+                                            {isItemOverLimit && (
+                                              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 pt-1 border-t border-dashed border-amber-300 dark:border-amber-800">
+                                                ⚠️ เกินสิทธิเบิกจ่ายประจำเดือน (฿
+                                                {svcInfo.phoneReimbursementLimit?.toLocaleString()}
+                                                )
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            } catch (e) {
+                              return null;
+                            }
+                          })()}
+
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">จำนวนเงิน (บาท)</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              รวมเป็นจำนวนเงิน (บาท)
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md text-primary font-semibold text-lg">
-                              {billToView.invoiceAmount ? Number(billToView.invoiceAmount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}
+                              {billToView.invoiceAmount
+                                ? Number(
+                                    billToView.invoiceAmount,
+                                  ).toLocaleString("th-TH", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">ปริมาณการใช้</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              ปริมาณการใช้
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.usageAmount ? Number(billToView.usageAmount).toLocaleString('th-TH') : "-"}
+                              {billToView.usageAmount
+                                ? Number(billToView.usageAmount).toLocaleString(
+                                    "th-TH",
+                                  )
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1 md:col-span-2">
-                            <p className="text-muted-foreground text-sm font-medium">เลขที่ใบแจ้งหนี้ (Invoice)</p>
-                            <p className="bg-muted/50 p-2 rounded-md">{billToView.invoiceNumber || "-"}</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              เลขที่ใบแจ้งหนี้ (Invoice)
+                            </p>
+                            <p className="bg-muted/50 p-2 rounded-md">
+                              {billToView.invoiceNumber || "-"}
+                            </p>
                           </div>
                           <div className="grid gap-1 md:col-span-2">
-                            <p className="text-muted-foreground text-sm font-medium">เอกสารใบแจ้งหนี้</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              เอกสารใบแจ้งหนี้
+                            </p>
                             {billToView.attachmentInvoice ? (
-                              <a href={billToView.attachmentInvoice} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-blue-600">
+                              <a
+                                href={billToView.attachmentInvoice}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-blue-600"
+                              >
                                 <FileText className="h-4 w-4" />
-                                <span className="text-sm font-medium">ดูไฟล์เอกสาร</span>
+                                <span className="text-sm font-medium">
+                                  ดูไฟล์เอกสาร
+                                </span>
                               </a>
                             ) : (
-                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">-</p>
+                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">
+                                -
+                              </p>
                             )}
                           </div>
                         </>
@@ -801,94 +1218,174 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
                     <div className="flex items-center gap-2 border-b pb-3">
                       <Banknote className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg tracking-tight">การเบิกจ่ายค่าสาธารณูปโภค</h3>
+                      <h3 className="font-semibold text-lg tracking-tight">
+                        การเบิกจ่ายค่าสาธารณูปโภค
+                      </h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                       <div className="grid gap-1 md:col-span-2">
-                        <p className="text-muted-foreground text-sm font-medium">สถานะการเบิกจ่าย</p>
-                        <Badge variant={billToView.paymentStatus === 'PAID' ? 'default' : 'secondary'} className={`mt-1 w-fit ${billToView.paymentStatus === 'PAID' ? 'bg-green-600 hover:bg-green-700' : ''}`}>
-                          {billToView.paymentStatus === 'PAID' ? 'เบิกจ่ายแล้ว' : 'ยังไม่ได้เบิกจ่าย'}
+                        <p className="text-muted-foreground text-sm font-medium">
+                          สถานะการเบิกจ่าย
+                        </p>
+                        <Badge
+                          variant={
+                            billToView.paymentStatus === "PAID"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className={`mt-1 w-fit ${billToView.paymentStatus === "PAID" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                        >
+                          {billToView.paymentStatus === "PAID"
+                            ? "เบิกจ่ายแล้ว"
+                            : "ยังไม่ได้เบิกจ่าย"}
                         </Badge>
                       </div>
 
-                      {billToView.paymentStatus === 'PAID' && (
+                      {billToView.paymentStatus === "PAID" && (
                         <>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">วันที่เอกสาร</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              วันที่เอกสาร
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md">
-                              {billToView.paymentDate ? format(new Date(billToView.paymentDate), 'dd/MM/yyyy') : "-"}
+                              {billToView.paymentDate
+                                ? format(
+                                    new Date(billToView.paymentDate),
+                                    "dd/MM/yyyy",
+                                  )
+                                : "-"}
                             </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">รหัสงบประมาณ</p>
-                            <p className="bg-muted/50 p-2 rounded-md">{billToView.budgetCode || "-"}</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              รหัสงบประมาณ
+                            </p>
+                            <p className="bg-muted/50 p-2 rounded-md">
+                              {billToView.budgetCode || "-"}
+                            </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">เลขเอกสาร</p>
-                            <p className="bg-muted/50 p-2 rounded-md">{billToView.paymentDocNumber || "-"}</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              เลขเอกสาร
+                            </p>
+                            <p className="bg-muted/50 p-2 rounded-md">
+                              {billToView.paymentDocNumber || "-"}
+                            </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">ประเภทเอกสาร</p>
-                            <p className="bg-muted/50 p-2 rounded-md">{billToView.docType || "-"}</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              ประเภทเอกสาร
+                            </p>
+                            <p className="bg-muted/50 p-2 rounded-md">
+                              {billToView.docType || "-"}
+                            </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">รหัสแยกประเภท</p>
-                            <p className="bg-muted/50 p-2 rounded-md">{billToView.accountCode || "-"}</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              รหัสแยกประเภท
+                            </p>
+                            <p className="bg-muted/50 p-2 rounded-md">
+                              {billToView.accountCode || "-"}
+                            </p>
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">จำนวนเงิน (บาท)</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              จำนวนเงินที่เบิกจ่าย (บาท)
+                            </p>
                             <p className="bg-muted/50 p-2 rounded-md text-green-600 font-semibold text-lg">
-                              {billToView.paidAmount ? Number(billToView.paidAmount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}
+                              {billToView.paidAmount
+                                ? Number(billToView.paidAmount).toLocaleString(
+                                    "th-TH",
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    },
+                                  )
+                                : "-"}
                             </p>
                           </div>
-                          
+
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">ใบเสร็จรับเงิน</p>
+                            <p className="text-muted-foreground text-sm font-medium">
+                              ใบเสร็จรับเงิน
+                            </p>
                             {billToView.attachmentReceipt ? (
-                              <a href={billToView.attachmentReceipt} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-green-600">
+                              <a
+                                href={billToView.attachmentReceipt}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-green-600"
+                              >
                                 <FileText className="h-4 w-4" />
-                                <span className="text-sm font-medium">ดูไฟล์เอกสาร</span>
+                                <span className="text-sm font-medium">
+                                  ดูไฟล์เอกสาร
+                                </span>
                               </a>
                             ) : (
-                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">-</p>
+                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">
+                                -
+                              </p>
                             )}
                           </div>
                           <div className="grid gap-1">
-                            <p className="text-muted-foreground text-sm font-medium">รายงานจ่ายตรง / รายงาน KTB</p>
-                            {billToView.attachmentDirectPayment || billToView.attachmentKtbReport ? (
-                              <a href={billToView.attachmentDirectPayment || billToView.attachmentKtbReport || undefined} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-orange-600">
+                            <p className="text-muted-foreground text-sm font-medium">
+                              รายงานจ่ายตรง / รายงาน KTB
+                            </p>
+                            {billToView.attachmentDirectPayment ||
+                            billToView.attachmentKtbReport ? (
+                              <a
+                                href={
+                                  billToView.attachmentDirectPayment ||
+                                  billToView.attachmentKtbReport ||
+                                  undefined
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 w-fit text-orange-600"
+                              >
                                 <FileText className="h-4 w-4" />
-                                <span className="text-sm font-medium">ดูไฟล์เอกสาร</span>
+                                <span className="text-sm font-medium">
+                                  ดูไฟล์เอกสาร
+                                </span>
                               </a>
                             ) : (
-                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">-</p>
+                              <p className="bg-muted/50 p-2 rounded-md text-muted-foreground">
+                                -
+                              </p>
                             )}
                           </div>
                         </>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
                     <h4 className="font-semibold text-lg tracking-tight flex items-center gap-2 border-b pb-3 text-primary">
                       <CalendarClock className="h-5 w-5" /> สถานะปัจจุบันจากระบบ
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                       <div className="grid gap-1">
-                        <p className="text-muted-foreground text-sm font-medium">สถานะตรวจสอบ (กตน.)</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          สถานะตรวจสอบ (กตน.)
+                        </p>
                         {billToView.auditStatus === "PENDING_CORRECTION" ? (
                           <div className="flex flex-col gap-2 mt-1">
-                            <Badge variant="outline" className="bg-amber-100 text-amber-700 w-fit text-sm">
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-100 text-amber-700 w-fit text-sm"
+                            >
                               พบข้อสังเกต (รอแก้ไข)
                             </Badge>
                             <div className="bg-amber-50 p-3 rounded-md border border-amber-200 text-amber-900 mt-1">
-                              <p className="font-semibold text-sm mb-1.5 opacity-80">สาเหตุที่พบ:</p>
+                              <p className="font-semibold text-sm mb-1.5 opacity-80">
+                                สาเหตุที่พบ:
+                              </p>
                               <ul className="list-disc pl-4 text-sm space-y-1">
                                 {getAuditIssueTexts(billToView).length > 0 ? (
-                                  getAuditIssueTexts(billToView).map((issue, idx) => (
-                                    <li key={idx}>{issue}</li>
-                                  ))
+                                  getAuditIssueTexts(billToView).map(
+                                    (issue, idx) => <li key={idx}>{issue}</li>,
+                                  )
                                 ) : (
                                   <li>ไม่ระบุสาเหตุ</li>
                                 )}
@@ -897,18 +1394,31 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-1 items-start mt-1">
-                            <Badge 
-                              variant={!billToView.auditStatus || billToView.auditStatus === "CORRECTED" ? "secondary" : "outline"} 
+                            <Badge
+                              variant={
+                                !billToView.auditStatus ||
+                                billToView.auditStatus === "CORRECTED"
+                                  ? "secondary"
+                                  : "outline"
+                              }
                               className={`w-fit text-sm ${
-                                !billToView.auditStatus ? "bg-green-100 text-green-700" :
-                                "bg-blue-100 text-blue-700"
+                                !billToView.auditStatus
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-blue-100 text-blue-700"
                               }`}
                             >
                               {!billToView.auditStatus ? "ปกติ" : "แก้ไขแล้ว"}
                             </Badge>
                             {billToView.isReviewed && (
                               <div className="flex items-center text-xs text-emerald-600 font-medium mt-1">
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> ตรวจสอบแล้วเมื่อ {billToView.reviewedAt && format(new Date(billToView.reviewedAt), 'dd MMM yy HH:mm', { locale: th })}
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{" "}
+                                ตรวจสอบแล้วเมื่อ{" "}
+                                {billToView.reviewedAt &&
+                                  format(
+                                    new Date(billToView.reviewedAt),
+                                    "dd MMM yy HH:mm",
+                                    { locale: th },
+                                  )}
                               </div>
                             )}
                           </div>
@@ -918,16 +1428,18 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   </div>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="history" className="mt-4">
                 <div className="space-y-4 rounded-xl border bg-card/50 p-6 shadow-sm min-h-[400px]">
                   <h3 className="font-semibold text-lg tracking-tight flex items-center gap-2 border-b pb-3 mb-4">
                     <Clock className="h-5 w-5 text-primary" /> ประวัติการทำรายการ
                   </h3>
-                  
+
                   {isLoadingLogs ? (
                     <div className="flex justify-center items-center h-32">
-                      <p className="text-muted-foreground animate-pulse">กำลังโหลดข้อมูล...</p>
+                      <p className="text-muted-foreground animate-pulse">
+                        กำลังโหลดข้อมูล...
+                      </p>
                     </div>
                   ) : billLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
@@ -942,19 +1454,32 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
                             <div>
                               <p className="font-medium text-sm">
-                                {log.action === 'CREATED' && 'สร้างรายการบิล'}
-                                {log.action === 'UPDATED' && 'แก้ไขข้อมูลบิล'}
-                                {log.action === 'AUDITED' && 'ตรวจสอบ/ประเมินบิล'}
-                                {!['CREATED', 'UPDATED', 'AUDITED'].includes(log.action) && log.action}
+                                {log.action === "CREATED" && "สร้างรายการบิล"}
+                                {log.action === "UPDATED" && "แก้ไขข้อมูลบิล"}
+                                {log.action === "AUDITED" && "ตรวจสอบ/ประเมินบิล"}
+                                {!["CREATED", "UPDATED", "AUDITED"].includes(
+                                  log.action,
+                                ) && log.action}
                               </p>
                               <p className="text-sm text-muted-foreground mt-1">
                                 {log.details}
                               </p>
                             </div>
                             <div className="text-xs text-muted-foreground whitespace-nowrap text-right">
-                              <p>{format(new Date(log.createdAt), 'dd/MM/yyyy HH:mm')}</p>
-                              <p className="mt-1 font-medium">{log.userName || "ไม่ทราบชื่อผู้ใช้"}</p>
-                              {log.departmentName && <p className="opacity-80">{log.departmentName}</p>}
+                              <p>
+                                {format(
+                                  new Date(log.createdAt),
+                                  "dd/MM/yyyy HH:mm",
+                                )}
+                              </p>
+                              <p className="mt-1 font-medium">
+                                {log.userName || "ไม่ทราบชื่อผู้ใช้"}
+                              </p>
+                              {log.departmentName && (
+                                <p className="opacity-80">
+                                  {log.departmentName}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -965,19 +1490,30 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
               </TabsContent>
             </Tabs>
           )}
-          
+
           <div className="flex gap-2 justify-end pt-4 border-t mt-6">
-            <Button variant="outline" onClick={() => {
-              setIsViewDialogOpen(false);
-              setBillToView(null);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsViewDialogOpen(false);
+                setBillToView(null);
+              }}
+            >
               ปิดหน้าต่าง
             </Button>
-            
-            {billToView && userRole === "admin" && (!billToView.auditStatus || billToView.auditStatus === "CORRECTED") && (
-              billToView.isReviewed ? (
-                <Button 
-                  variant="outline" 
+
+            {billToView &&
+              [
+                "admin",
+                "auditor",
+                "strategy_finance",
+                "central_staff",
+              ].includes(userRole || "") &&
+              (!billToView.auditStatus ||
+                billToView.auditStatus === "CORRECTED") &&
+              (billToView.isReviewed ? (
+                <Button
+                  variant="outline"
                   onClick={handleUnreview}
                   disabled={isPending}
                   className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50"
@@ -985,21 +1521,26 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   ยกเลิกการตรวจรับรอง
                 </Button>
               ) : (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleReview}
                   disabled={isPending}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-none"
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" /> ตรวจเรียบร้อยแล้ว
                 </Button>
-              )
-            )}
+              ))}
 
-            {billToView && userRole === "admin" && (
-              billToView.isManualAnomaly ? (
-                <Button 
-                  variant="outline" 
+            {billToView &&
+              [
+                "admin",
+                "auditor",
+                "strategy_finance",
+                "central_staff",
+              ].includes(userRole || "") &&
+              (billToView.isManualAnomaly ? (
+                <Button
+                  variant="outline"
                   onClick={handleUnflagManual}
                   disabled={isPending}
                   className="border-muted-foreground/30 text-muted-foreground hover:bg-muted"
@@ -1007,18 +1548,20 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
                   <Flag className="mr-2 h-4 w-4" /> ยกเลิกการปักธง
                 </Button>
               ) : (
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => setBillToFlag(billToView)}
                   disabled={isPending}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Flag className="mr-2 h-4 w-4" /> ระบุว่าผิดปกติ
                 </Button>
-              )
-            )}
+              ))}
             {billToView && (
-              <Link href={`/bills/${billToView.id}/edit`} className={buttonVariants({ variant: "default" })}>
+              <Link
+                href={`/bills/${billToView.id}/edit`}
+                className={buttonVariants({ variant: "default" })}
+              >
                 <Edit className="mr-2 h-4 w-4" /> อัพเดทข้อมูลบิลนี้
               </Link>
             )}
@@ -1026,12 +1569,15 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!billToFlag} onOpenChange={(open) => {
-        if (!open) {
-          setBillToFlag(null);
-          setFlagReason("");
-        }
-      }}>
+      <Dialog
+        open={!!billToFlag}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBillToFlag(null);
+            setFlagReason("");
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -1050,13 +1596,17 @@ export function BillsTable({ initialData, showAuditStatus = false, userRole }: {
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => {
-              setBillToFlag(null);
-              setFlagReason("");
-            }} disabled={isPending}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBillToFlag(null);
+                setFlagReason("");
+              }}
+              disabled={isPending}
+            >
               ยกเลิก
             </Button>
-            <Button 
+            <Button
               onClick={handleFlagManual}
               disabled={isPending || !flagReason.trim()}
               className="bg-destructive hover:bg-destructive/90 text-white"

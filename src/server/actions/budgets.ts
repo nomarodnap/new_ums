@@ -21,7 +21,10 @@ export async function createBudget(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { success: false as const, error: parsed.error.flatten().fieldErrors };
+    return {
+      success: false as const,
+      error: parsed.error.flatten().fieldErrors,
+    };
   }
 
   try {
@@ -35,7 +38,7 @@ export async function createBudget(formData: FormData) {
       departmentId: parsed.data.departmentId,
       fiscalYear: parsed.data.fiscalYear,
     });
-    
+
     revalidatePath("/budgets");
     return { success: true as const };
   } catch (error) {
@@ -57,12 +60,16 @@ export async function updateBudget(id: string, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { success: false as const, error: parsed.error.flatten().fieldErrors };
+    return {
+      success: false as const,
+      error: parsed.error.flatten().fieldErrors,
+    };
   }
 
   try {
-    await db.update(budgets)
-      .set({ 
+    await db
+      .update(budgets)
+      .set({
         budgetCode: parsed.data.budgetCode,
         name: parsed.data.name,
         fundSource: parsed.data.fundSource,
@@ -70,10 +77,10 @@ export async function updateBudget(id: string, formData: FormData) {
         transferredAmount: parsed.data.transferredAmount.toString(),
         departmentId: parsed.data.departmentId,
         fiscalYear: parsed.data.fiscalYear,
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       })
       .where(eq(budgets.id, id));
-      
+
     revalidatePath("/budgets");
     return { success: true as const };
   } catch (error) {
@@ -82,7 +89,7 @@ export async function updateBudget(id: string, formData: FormData) {
 }
 
 export async function deleteBudget(id: string) {
-  await requireRole(["admin", "strategy_finance"]); 
+  await requireRole(["admin", "strategy_finance"]);
 
   try {
     await db.delete(budgets).where(eq(budgets.id, id));

@@ -1,18 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, Zap, Droplet, Phone, Wifi, Mail, Edit } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Zap,
+  Droplet,
+  Phone,
+  Wifi,
+  Mail,
+  Edit,
+  Radio,
+} from "lucide-react";
 import { deleteDepartmentService } from "@/server/actions/department-services";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -50,34 +68,56 @@ export function ServicesTable({
 }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+  const [utilityFilter, setUtilityFilter] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [serviceToEdit, setServiceToEdit] = useState<Service | null>(null);
 
+  // Extract unique utility types from actual data
+  const availableUtilityTypes = Array.from(
+    new Set(services.map((s) => s.utilityType).filter(Boolean)),
+  );
+
   const filteredServices = services.filter((s) => {
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
+      searchTerm === "" ||
       (s.departmentName || "").toLowerCase().includes(searchLower) ||
       s.serviceNumber.toLowerCase().includes(searchLower) ||
       s.provider.toLowerCase().includes(searchLower) ||
-      (s.phoneOwnerName || "").toLowerCase().includes(searchLower)
-    );
+      (s.phoneOwnerName || "").toLowerCase().includes(searchLower) ||
+      (s.phoneOwnerPosition || "").toLowerCase().includes(searchLower) ||
+      (s.locationType || "").toLowerCase().includes(searchLower);
+
+    const matchesUtility =
+      utilityFilter === "all" || s.utilityType === utilityFilter;
+
+    return matchesSearch && matchesUtility;
   });
 
   const getUtilityIcon = (type: string) => {
     switch (type) {
-      case "ค่าไฟฟ้า": return <Zap className="h-4 w-4 text-amber-500" />;
-      case "ค่าน้ำประปา": return <Droplet className="h-4 w-4 text-blue-500" />;
-      case "ค่าโทรศัพท์": return <Phone className="h-4 w-4 text-green-500" />;
-      case "ค่าอินเทอร์เน็ต": return <Wifi className="h-4 w-4 text-purple-500" />;
-      case "ค่าไปรษณีย์": return <Mail className="h-4 w-4 text-red-500" />;
-      default: return null;
+      case "ค่าไฟฟ้า":
+        return <Zap className="h-4 w-4 text-amber-500" />;
+      case "ค่าน้ำประปา":
+      case "ค่าประปา&น้ำบาดาล":
+        return <Droplet className="h-4 w-4 text-blue-500" />;
+      case "ค่าโทรศัพท์":
+        return <Phone className="h-4 w-4 text-green-500" />;
+      case "ค่าอินเทอร์เน็ต":
+      case "ค่าสื่อสาร&โทรคมนาคม":
+        return <Wifi className="h-4 w-4 text-purple-500" />;
+      case "ค่าไปรษณีย์":
+      case "ค่าบริการไปรษณีย์":
+        return <Mail className="h-4 w-4 text-red-500" />;
+      default:
+        return <Radio className="h-4 w-4 text-primary" />;
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการนี้?")) return;
-    
+
     setIsDeleting(id);
     const result = await deleteDepartmentService(id);
     if (result.success) {
@@ -91,22 +131,60 @@ export function ServicesTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาหน่วยงาน, รหัสเครื่องวัด, ชื่อเจ้าของเบอร์..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Search and Dropdown Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาหน่วยงาน, รหัสเครื่องวัด, ชื่อเจ้าของ..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="w-[180px]">
+            <Select
+              value={utilityFilter}
+              onValueChange={(val) => val && setUtilityFilter(val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="ประเภทสาธารณูปโภค">
+                  {utilityFilter === "all"
+                    ? "ทุกประเภทสาธารณูปโภค"
+                    : utilityFilter}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกประเภทสาธารณูปโภค</SelectItem>
+                {availableUtilityTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Button onClick={() => { setServiceToEdit(null); setIsFormOpen(true); }} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> เพิ่มรายการใหม่
-        </Button>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <span className="text-xs text-muted-foreground">
+            พบ {filteredServices.length} จาก {services.length} รายการ
+          </span>
+          <Button
+            onClick={() => {
+              setServiceToEdit(null);
+              setIsFormOpen(true);
+            }}
+            className="shrink-0"
+          >
+            <Plus className="mr-2 h-4 w-4" /> เพิ่มรายการใหม่
+          </Button>
+        </div>
       </div>
 
-      <div className="border rounded-lg bg-white overflow-x-auto dark:bg-slate-950">
+      <div className="border rounded-lg bg-card shadow-xs overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -120,7 +198,10 @@ export function ServicesTable({
           <TableBody>
             {filteredServices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   ไม่พบข้อมูล
                 </TableCell>
               </TableRow>
@@ -150,21 +231,28 @@ export function ServicesTable({
                     {service.utilityType === "ค่าโทรศัพท์" ? (
                       <div className="flex flex-col text-sm">
                         <span>{service.phoneOwnerName}</span>
-                        <span className="text-xs text-muted-foreground">{service.phoneOwnerPosition}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {service.phoneOwnerPosition}
+                        </span>
                         {service.phoneReimbursementLimit && (
-                          <Badge variant="outline" className="w-fit mt-1 text-[10px]">
+                          <Badge
+                            variant="outline"
+                            className="w-fit mt-1 text-[10px]"
+                          >
                             สิทธิเบิก: ฿{service.phoneReimbursementLimit}
                           </Badge>
                         )}
                       </div>
                     ) : (
-                      <span className="text-sm">{service.locationType || "-"}</span>
+                      <span className="text-sm">
+                        {service.locationType || "-"}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                         onClick={() => {
@@ -174,8 +262,8 @@ export function ServicesTable({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => handleDelete(service.id)}
@@ -192,8 +280,8 @@ export function ServicesTable({
         </Table>
       </div>
 
-      <ServiceFormSheet 
-        open={isFormOpen} 
+      <ServiceFormSheet
+        open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open);
           if (!open) setTimeout(() => setServiceToEdit(null), 300);

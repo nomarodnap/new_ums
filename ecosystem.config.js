@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: "cluster", // ใช้ cluster mode เพื่อรองรับ load ได้ดีขึ้น
       autorestart: true,
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: "1G",
       env: {
         NODE_ENV: "production",
         PORT: 3002,

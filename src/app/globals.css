@@ -128,7 +128,7 @@
   html {
     @apply font-sans;
   }
-  
+
   /* Micro animations */
   .card-hover {
     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/30;

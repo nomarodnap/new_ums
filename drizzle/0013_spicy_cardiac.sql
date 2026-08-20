@@ -1,0 +1,1 @@
+ALTER TABLE "audits" ADD COLUMN "is_phone_usage_over_limit" boolean DEFAULT false;

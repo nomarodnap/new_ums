@@ -28,7 +28,7 @@ export function DatePickerBE({
   disabled?: boolean;
 }) {
   const [date, setDate] = React.useState<Date | undefined>(
-    defaultValue ? new Date(defaultValue) : undefined
+    defaultValue ? new Date(defaultValue) : undefined,
   );
 
   const formatBE = (d: Date) => {
@@ -40,26 +40,24 @@ export function DatePickerBE({
   return (
     <>
       <Popover>
-        <PopoverTrigger render={
-          <Button
-            variant={"outline"}
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground",
-              disabled && "opacity-50 cursor-not-allowed"
-            )}
-            disabled={disabled}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? formatBE(date) : <span>เลือกวันที่</span>}
-          </Button>
-        } />
+        <PopoverTrigger
+          render={
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !date && "text-muted-foreground",
+                disabled && "opacity-50 cursor-not-allowed",
+              )}
+              disabled={disabled}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date ? formatBE(date) : <span>เลือกวันที่</span>}
+            </Button>
+          }
+        />
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-          />
+          <Calendar mode="single" selected={date} onSelect={setDate} />
         </PopoverContent>
       </Popover>
       {/* Visually hidden text input for form submission (native YYYY-MM-DD) so HTML5 required validation works */}

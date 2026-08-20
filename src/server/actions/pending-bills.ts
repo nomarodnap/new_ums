@@ -19,7 +19,11 @@ const createPendingBillSchema = z.object({
 
 export async function createPendingBill(prevState: any, formData: FormData) {
   try {
-    const session = await requireRole(["admin", "central_staff", "regional_staff"]);
+    const session = await requireRole([
+      "admin",
+      "central_staff",
+      "regional_staff",
+    ]);
 
     const parsed = createPendingBillSchema.safeParse({
       departmentId: formData.get("departmentId"),
@@ -32,9 +36,9 @@ export async function createPendingBill(prevState: any, formData: FormData) {
     });
 
     if (!parsed.success) {
-      return { 
-        success: false, 
-        error: parsed.error.flatten().fieldErrors 
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors,
       };
     }
 
@@ -51,17 +55,20 @@ export async function createPendingBill(prevState: any, formData: FormData) {
       serviceNumber: parsed.data.serviceNumber,
       locationType: parsed.data.locationType,
       estimatedAmount: parsed.data.estimatedAmountBaht.toString(),
-      paymentStatus: 'PENDING',
-      invoiceStatus: 'NOT_RECEIVED',
+      paymentStatus: "PENDING",
+      invoiceStatus: "NOT_RECEIVED",
       isPendingBillOnly: true,
       createdBy: session.user.id,
     });
-    
+
     // Run automated audit checks in the background
     runAuditChecks(billId, session.user.id).catch(console.error);
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล หรือท่านไม่มีสิทธิ์ในการทำรายการนี้" };
+    return {
+      success: false,
+      error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล หรือท่านไม่มีสิทธิ์ในการทำรายการนี้",
+    };
   }
 }

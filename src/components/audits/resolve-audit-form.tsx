@@ -13,7 +13,7 @@ export function ResolveAuditForm({ auditId }: { auditId: string }) {
   return (
     <form action={formAction} className="space-y-4 mt-6">
       <input type="hidden" name="auditId" value={auditId} />
-      
+
       {state?.error && (
         <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20">
           {state.error}
@@ -30,18 +30,20 @@ export function ResolveAuditForm({ auditId }: { auditId: string }) {
         <>
           <div className="grid gap-2">
             <Label htmlFor="remarks">บันทึกการแก้ไข / หมายเหตุ</Label>
-            <Textarea 
-              id="remarks" 
-              name="remarks" 
+            <Textarea
+              id="remarks"
+              name="remarks"
               placeholder="ระบุการดำเนินการแก้ไขที่ได้ทำไป..."
               required
             />
           </div>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="attachment">แนบเอกสารหลักฐาน (PDF, JPG)</Label>
             <Input id="attachment" name="attachment" type="file" />
-            <p className="text-xs text-muted-foreground">เช่น หนังสือขออนุมัติอธิบดี, หลักฐานการเรียกเงินคืน</p>
+            <p className="text-xs text-muted-foreground">
+              เช่น หนังสือขออนุมัติอธิบดี, หลักฐานการเรียกเงินคืน
+            </p>
           </div>
 
           <Button type="submit" disabled={isPending} className="mt-2">

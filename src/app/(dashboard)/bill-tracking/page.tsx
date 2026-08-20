@@ -1,5 +1,9 @@
 import { db } from "@/server/db";
-import { utilityBills, departments, departmentServices } from "@/server/db/schema";
+import {
+  utilityBills,
+  departments,
+  departmentServices,
+} from "@/server/db/schema";
 import { eq, and, or, inArray, sql } from "drizzle-orm";
 import { requireRole } from "@/server/auth";
 import { TrackingDashboard } from "./tracking-dashboard";
@@ -14,11 +18,19 @@ export default async function BillTrackingPage({
   searchParams: Promise<{ month?: string; year?: string }>;
 }) {
   const params = await searchParams;
-  const session = await requireRole(["admin", "auditor", "strategy_finance", "central_staff", "regional_staff"]);
+  const session = await requireRole([
+    "admin",
+    "auditor",
+    "strategy_finance",
+    "central_staff",
+    "regional_staff",
+  ]);
   const userRole = session.user.role;
   const userDepartmentId = session.user.departmentId as string | undefined;
 
-  const isGlobalView = userRole ? ["admin", "auditor", "strategy_finance"].includes(userRole) : false;
+  const isGlobalView = userRole
+    ? ["admin", "auditor", "strategy_finance"].includes(userRole)
+    : false;
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
@@ -28,41 +40,47 @@ export default async function BillTrackingPage({
   const year = params.year ? parseInt(params.year, 10) : currentYear;
 
   // 1. ดึงข้อมูล department_services
-  let servicesQuery = db.select({
-    id: departmentServices.id,
-    departmentId: departmentServices.departmentId,
-    utilityType: departmentServices.utilityType,
-    provider: departmentServices.provider,
-    serviceNumber: departmentServices.serviceNumber,
-    departmentName: departments.fullName,
-  }).from(departmentServices)
+  let servicesQuery = db
+    .select({
+      id: departmentServices.id,
+      departmentId: departmentServices.departmentId,
+      utilityType: departmentServices.utilityType,
+      provider: departmentServices.provider,
+      serviceNumber: departmentServices.serviceNumber,
+      departmentName: departments.fullName,
+    })
+    .from(departmentServices)
     .leftJoin(departments, eq(departmentServices.departmentId, departments.id));
 
   if (!isGlobalView && userDepartmentId) {
-    servicesQuery = servicesQuery.where(eq(departmentServices.departmentId, userDepartmentId)) as any;
+    servicesQuery = servicesQuery.where(
+      eq(departmentServices.departmentId, userDepartmentId),
+    ) as any;
   }
 
   const allServices = await servicesQuery;
 
   // 2. ดึงข้อมูล utility_bills ของเดือนนั้น
-  let billsQuery = db.select({
-    id: utilityBills.id,
-    departmentId: utilityBills.departmentId,
-    depositUnitId: utilityBills.depositUnitId,
-    utilityType: utilityBills.utilityType,
-    provider: utilityBills.provider,
-    serviceNumber: utilityBills.serviceNumber,
-    invoiceStatus: utilityBills.invoiceStatus,
-    paymentStatus: utilityBills.paymentStatus,
-    invoiceAmount: utilityBills.invoiceAmount,
-    estimatedAmount: utilityBills.estimatedAmount,
-    departmentName: departments.fullName,
-  }).from(utilityBills)
+  let billsQuery = db
+    .select({
+      id: utilityBills.id,
+      departmentId: utilityBills.departmentId,
+      depositUnitId: utilityBills.depositUnitId,
+      utilityType: utilityBills.utilityType,
+      provider: utilityBills.provider,
+      serviceNumber: utilityBills.serviceNumber,
+      invoiceStatus: utilityBills.invoiceStatus,
+      paymentStatus: utilityBills.paymentStatus,
+      invoiceAmount: utilityBills.invoiceAmount,
+      estimatedAmount: utilityBills.estimatedAmount,
+      departmentName: departments.fullName,
+    })
+    .from(utilityBills)
     .leftJoin(departments, eq(utilityBills.departmentId, departments.id));
 
   const baseCondition = and(
     eq(utilityBills.billingMonth, month),
-    eq(utilityBills.billingYear, year)
+    eq(utilityBills.billingYear, year),
   );
 
   let finalBillsQuery;
@@ -72,9 +90,9 @@ export default async function BillTrackingPage({
         baseCondition,
         or(
           eq(utilityBills.departmentId, userDepartmentId),
-          eq(utilityBills.depositUnitId, userDepartmentId)
-        )
-      )
+          eq(utilityBills.depositUnitId, userDepartmentId),
+        ),
+      ),
     );
   } else {
     finalBillsQuery = billsQuery.where(baseCondition);
@@ -85,8 +103,11 @@ export default async function BillTrackingPage({
   // Flatten bills by splitting comma-separated service numbers
   const flattenedBills = [];
   for (const b of bills) {
-    if (b.serviceNumber && b.serviceNumber.includes(',')) {
-      const nums = b.serviceNumber.split(',').map(s => s.trim()).filter(Boolean);
+    if (b.serviceNumber && b.serviceNumber.includes(",")) {
+      const nums = b.serviceNumber
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       for (const num of nums) {
         flattenedBills.push({ ...b, serviceNumber: num });
       }
@@ -101,19 +122,23 @@ export default async function BillTrackingPage({
 
   for (const service of allServices) {
     const matchingBills = flattenedBills.filter(
-      b => b.departmentId === service.departmentId && 
-           b.utilityType === service.utilityType && 
-           b.serviceNumber === service.serviceNumber
+      (b) =>
+        b.departmentId === service.departmentId &&
+        b.utilityType === service.utilityType &&
+        b.serviceNumber === service.serviceNumber,
     );
 
     if (matchingBills.length > 0) {
       for (const bill of matchingBills) {
         processedFlattenedKeys.add(`${bill.id}-${bill.serviceNumber}`);
-        
+
         let status = "UNKNOWN";
         if (bill.invoiceStatus === "NOT_RECEIVED") {
           status = "NOT_RECEIVED";
-        } else if (bill.invoiceStatus === "RECEIVED" && bill.paymentStatus === "PENDING") {
+        } else if (
+          bill.invoiceStatus === "RECEIVED" &&
+          bill.paymentStatus === "PENDING"
+        ) {
           status = "PENDING_PAYMENT";
         } else if (bill.paymentStatus === "PAID") {
           status = "PAID";
@@ -153,7 +178,10 @@ export default async function BillTrackingPage({
       let status = "UNKNOWN";
       if (bill.invoiceStatus === "NOT_RECEIVED") {
         status = "NOT_RECEIVED";
-      } else if (bill.invoiceStatus === "RECEIVED" && bill.paymentStatus === "PENDING") {
+      } else if (
+        bill.invoiceStatus === "RECEIVED" &&
+        bill.paymentStatus === "PENDING"
+      ) {
         status = "PENDING_PAYMENT";
       } else if (bill.paymentStatus === "PAID") {
         status = "PAID";
@@ -184,12 +212,8 @@ export default async function BillTrackingPage({
           </p>
         </div>
       </div>
-      
-      <TrackingDashboard 
-        initialData={trackingData} 
-        month={month} 
-        year={year} 
-      />
+
+      <TrackingDashboard initialData={trackingData} month={month} year={year} />
     </div>
   );
 }

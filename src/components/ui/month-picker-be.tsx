@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,8 +17,18 @@ import {
 } from "@/components/ui/popover";
 
 const months = [
-  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  "มกราคม",
+  "กุมภาพันธ์",
+  "มีนาคม",
+  "เมษายน",
+  "พฤษภาคม",
+  "มิถุนายน",
+  "กรกฎาคม",
+  "สิงหาคม",
+  "กันยายน",
+  "ตุลาคม",
+  "พฤศจิกายน",
+  "ธันวาคม",
 ];
 
 export function MonthPickerBE({
@@ -31,12 +45,12 @@ export function MonthPickerBE({
   onChange?: (value: string) => void;
 }) {
   const [date, setDate] = React.useState<Date | undefined>(
-    defaultValue ? new Date(`${defaultValue}-01T00:00:00`) : undefined
+    defaultValue ? new Date(`${defaultValue}-01T00:00:00`) : undefined,
   );
-  
+
   // For the view in the popover
   const [viewYear, setViewYear] = React.useState<number>(
-    date ? date.getFullYear() : new Date().getFullYear()
+    date ? date.getFullYear() : new Date().getFullYear(),
   );
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -52,7 +66,7 @@ export function MonthPickerBE({
     setIsOpen(false);
     if (onChange) {
       // Create YYYY-MM format manually to avoid timezone issues with date-fns format
-      const mm = String(monthIndex + 1).padStart(2, '0');
+      const mm = String(monthIndex + 1).padStart(2, "0");
       onChange(`${viewYear}-${mm}`);
     }
   };
@@ -60,18 +74,20 @@ export function MonthPickerBE({
   return (
     <>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger render={
-          <Button
-            variant={"outline"}
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? formatBE(date) : <span>เลือกเดือน</span>}
-          </Button>
-        } />
+        <PopoverTrigger
+          render={
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !date && "text-muted-foreground",
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date ? formatBE(date) : <span>เลือกเดือน</span>}
+            </Button>
+          }
+        />
         <PopoverContent className="w-64 p-3" align="start">
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -82,9 +98,7 @@ export function MonthPickerBE({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-sm font-medium">
-              พ.ศ. {viewYear + 543}
-            </div>
+            <div className="text-sm font-medium">พ.ศ. {viewYear + 543}</div>
             <Button
               variant="outline"
               type="button"
@@ -96,7 +110,8 @@ export function MonthPickerBE({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {months.map((month, idx) => {
-              const isSelected = date?.getMonth() === idx && date?.getFullYear() === viewYear;
+              const isSelected =
+                date?.getMonth() === idx && date?.getFullYear() === viewYear;
               return (
                 <Button
                   key={month}

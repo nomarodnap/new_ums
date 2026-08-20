@@ -2,10 +2,22 @@
 
 import { useTransition } from "react";
 import { markAsRead, markAllAsRead } from "@/server/actions/notifications";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, AlertTriangle, Info, CheckCircle2, Clock } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -29,7 +41,9 @@ interface NotificationListProps {
   initialNotifications: Notification[];
 }
 
-export function NotificationList({ initialNotifications }: NotificationListProps) {
+export function NotificationList({
+  initialNotifications,
+}: NotificationListProps) {
   const [isPending, startTransition] = useTransition();
 
   const handleMarkAsRead = (id: string) => {
@@ -74,7 +88,11 @@ export function NotificationList({ initialNotifications }: NotificationListProps
       case "URGENT":
         return <Badge variant="destructive">ด่วน</Badge>;
       case "WARNING":
-        return <Badge className="bg-amber-500 text-white hover:bg-amber-600">เฝ้าระวัง</Badge>;
+        return (
+          <Badge className="bg-amber-500 text-white hover:bg-amber-600">
+            เฝ้าระวัง
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">ปกติ</Badge>;
     }
@@ -85,10 +103,10 @@ export function NotificationList({ initialNotifications }: NotificationListProps
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold tracking-tight">การแจ้งเตือน</h2>
         {initialNotifications.some((n) => !n.isRead) && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleMarkAllAsRead} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllAsRead}
             disabled={isPending}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -104,13 +122,18 @@ export function NotificationList({ initialNotifications }: NotificationListProps
               <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold">ไม่มีการแจ้งเตือน</h3>
-            <p className="text-sm text-muted-foreground">คุณได้อ่านการแจ้งเตือนทั้งหมดแล้ว</p>
+            <p className="text-sm text-muted-foreground">
+              คุณได้อ่านการแจ้งเตือนทั้งหมดแล้ว
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {initialNotifications.map((notif) => (
-            <Card key={notif.id} className={`transition-colors ${!notif.isRead ? 'border-l-4 border-l-primary bg-muted/50' : 'opacity-70'}`}>
+            <Card
+              key={notif.id}
+              className={`transition-colors ${!notif.isRead ? "border-l-4 border-l-primary bg-muted/50" : "opacity-70"}`}
+            >
               <CardContent className="p-4 sm:p-6">
                 <div className="flex gap-4 items-start">
                   <div className="mt-1 flex-shrink-0">
@@ -119,27 +142,44 @@ export function NotificationList({ initialNotifications }: NotificationListProps
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <h4 className={`font-semibold ${!notif.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        <h4
+                          className={`font-semibold ${!notif.isRead ? "text-foreground" : "text-muted-foreground"}`}
+                        >
                           {notif.title}
                         </h4>
                         {getSeverityBadge(notif.severity)}
                         {!notif.isRead && (
-                          <Badge variant="default" className="text-[10px] h-5 px-1.5 rounded-full">ใหม่</Badge>
+                          <Badge
+                            variant="default"
+                            className="text-[10px] h-5 px-1.5 rounded-full"
+                          >
+                            ใหม่
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center text-xs text-muted-foreground whitespace-nowrap">
                         <Clock className="mr-1 h-3 w-3" />
-                        {format(new Date(notif.createdAt), "dd MMM yyyy HH:mm", { locale: th })}
+                        {format(
+                          new Date(notif.createdAt),
+                          "dd MMM yyyy HH:mm",
+                          { locale: th },
+                        )}
                       </div>
                     </div>
-                    <p className={`text-sm mt-2 ${!notif.isRead ? 'text-foreground/90' : 'text-muted-foreground'}`}>
+                    <p
+                      className={`text-sm mt-2 ${!notif.isRead ? "text-foreground/90" : "text-muted-foreground"}`}
+                    >
                       {notif.message}
                     </p>
                   </div>
                   <div className="flex-shrink-0 flex flex-col gap-2 items-end">
                     {notif.link && (
                       <Link href={notif.link}>
-                        <Button variant="outline" size="sm" className="text-xs h-8">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8"
+                        >
                           ดูรายละเอียด
                         </Button>
                       </Link>

@@ -19,7 +19,13 @@ const prompt = Prompt({
 
 export const metadata: Metadata = {
   title: "ระบบรายงานค่าสาธารณูปโภค - กรมประมง",
-  description: "ระบบจัดการและรายงานค่าใช้จ่ายสาธารณูปโภค กรมประมง (Department of Fisheries)",
+  description:
+    "ระบบจัดการและรายงานค่าใช้จ่ายสาธารณูปโภค กรมประมง (Department of Fisheries)",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    shortcut: ["/logo.png"],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -33,7 +39,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${prompt.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-prompt" suppressHydrationWarning>
+      <body
+        className="min-h-full flex flex-col font-prompt"
+        suppressHydrationWarning
+      >
         <NextTopLoader color="hsl(var(--primary))" showSpinner={false} />
         <ThemeProvider
           attribute="class"
@@ -41,9 +50,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
           <Toaster />
         </ThemeProvider>
       </body>

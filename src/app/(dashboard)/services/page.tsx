@@ -10,7 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default async function ServicesPage() {
-  const session = await requireRole(["admin", "central_staff", "regional_staff", "user"]);
+  const session = await requireRole([
+    "admin",
+    "central_staff",
+    "regional_staff",
+    "user",
+  ]);
 
   // Fetch services and join with departments
   const allServicesData = await db
@@ -30,20 +35,26 @@ export default async function ServicesPage() {
     .leftJoin(departments, eq(departmentServices.departmentId, departments.id));
 
   // Filter based on role
-  const services = session.user.role === "admin" 
-    ? allServicesData
-    : allServicesData.filter(s => s.departmentId === session.user.departmentId);
+  const services =
+    session.user.role === "admin"
+      ? allServicesData
+      : allServicesData.filter(
+          (s) => s.departmentId === session.user.departmentId,
+        );
 
   // Get departments for the form dropdown (Admin sees all, others see own)
-  const allDepartmentsData = await db.select({
-    id: departments.id,
-    fullName: departments.fullName,
-    shortName: departments.shortName,
-  }).from(departments);
-  
-  const allowedDepartments = session.user.role === "admin"
-    ? allDepartmentsData
-    : allDepartmentsData.filter(d => d.id === session.user.departmentId);
+  const allDepartmentsData = await db
+    .select({
+      id: departments.id,
+      fullName: departments.fullName,
+      shortName: departments.shortName,
+    })
+    .from(departments);
+
+  const allowedDepartments =
+    session.user.role === "admin"
+      ? allDepartmentsData
+      : allDepartmentsData.filter((d) => d.id === session.user.departmentId);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -53,13 +64,14 @@ export default async function ServicesPage() {
         </h2>
       </div>
       <p className="text-muted-foreground">
-        จัดการข้อมูลบัญชีผู้ให้บริการสาธารณูปโภค หมายเลขผู้ใช้ รหัสเครื่องวัด และเบอร์โทรศัพท์ของหน่วยงาน
+        จัดการข้อมูลบัญชีผู้ให้บริการสาธารณูปโภค หมายเลขผู้ใช้ รหัสเครื่องวัด
+        และเบอร์โทรศัพท์ของหน่วยงาน
       </p>
-      
-      <ServicesTable 
-        services={services} 
+
+      <ServicesTable
+        services={services}
         departments={allowedDepartments}
-        userRole={session.user.role as string} 
+        userRole={session.user.role as string}
         userDepartmentId={session.user.departmentId || null}
       />
     </div>

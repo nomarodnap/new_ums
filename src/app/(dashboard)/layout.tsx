@@ -1,21 +1,26 @@
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { NotificationBell } from "@/components/layout/notification-bell"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { auth } from "@/server/auth"
-import { headers } from "next/headers"
-import { db } from "@/server/db"
-import { departments } from "@/server/db/schema"
-import { eq } from "drizzle-orm"
-import { redirect } from "next/navigation"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { auth } from "@/server/auth";
+import { headers } from "next/headers";
+import { db } from "@/server/db";
+import { departments } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import Image from "next/image";
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
-  
+
   if (!session) {
     redirect("/sign-in");
   }
@@ -23,7 +28,7 @@ export default async function DashboardLayout({
   let departmentName = "ไม่ระบุหน่วยงาน";
   if (session.user.departmentId) {
     const dept = await db.query.departments.findFirst({
-      where: eq(departments.id, session.user.departmentId)
+      where: eq(departments.id, session.user.departmentId),
     });
     if (dept) {
       departmentName = dept.fullName;
@@ -40,9 +45,21 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur-md px-4 sticky top-0 z-10">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 backdrop-blur-md px-4 sticky top-0 z-10">
           <SidebarTrigger className="-ml-1" />
-          <div className="mr-4 font-semibold text-lg text-primary bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-teal-400 dark:from-cyan-400 dark:to-teal-200">ระบบรายงานค่าสาธารณูปโภค</div>
+          <div className="flex items-center gap-2.5 mr-4">
+            <Image
+              src="/logo.png"
+              alt="ตราสัญลักษณ์กรมประมง"
+              width={32}
+              height={32}
+              className="size-8 object-contain"
+              priority
+            />
+            <div className="font-semibold text-lg text-primary bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-teal-500 dark:from-cyan-400 dark:to-teal-200">
+              ระบบรายงานค่าสาธารณูปโภค กรมประมง
+            </div>
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <NotificationBell />
@@ -53,5 +70,5 @@ export default async function DashboardLayout({
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

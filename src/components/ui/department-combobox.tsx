@@ -61,14 +61,14 @@ export function DepartmentCombobox({
   };
 
   const selectedDepartment = departments.find(
-    (dept) => dept.fullName === internalValue || dept.id === internalValue
+    (dept) => dept.fullName === internalValue || dept.id === internalValue,
   );
 
   return (
     <>
       {name && <input type="hidden" name={name} value={internalValue} />}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger 
+        <PopoverTrigger
           render={
             <Button
               variant="outline"
@@ -77,7 +77,8 @@ export function DepartmentCombobox({
               className={cn(
                 "w-full justify-between font-normal",
                 !internalValue && "text-muted-foreground",
-                disabled && "bg-muted cursor-not-allowed opacity-100 text-muted-foreground"
+                disabled &&
+                  "bg-muted cursor-not-allowed opacity-100 text-muted-foreground",
               )}
               disabled={disabled}
             >
@@ -100,8 +101,10 @@ export function DepartmentCombobox({
               const searchLower = search.toLowerCase();
               if (
                 dept.fullName.toLowerCase().includes(searchLower) ||
-                (dept.shortName && dept.shortName.toLowerCase().includes(searchLower)) ||
-                (dept.costCenterCode && dept.costCenterCode.toLowerCase().includes(searchLower))
+                (dept.shortName &&
+                  dept.shortName.toLowerCase().includes(searchLower)) ||
+                (dept.costCenterCode &&
+                  dept.costCenterCode.toLowerCase().includes(searchLower))
               ) {
                 return 1;
               }
@@ -115,13 +118,13 @@ export function DepartmentCombobox({
                 {departments.map((dept) => (
                   <CommandItem
                     key={dept.id}
-                    value={dept.fullName.toLowerCase()}
+                    value={dept.id}
                     onSelect={() => handleSelect(dept.id)}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 flex-shrink-0",
-                        internalValue === dept.id ? "opacity-100" : "opacity-0"
+                        internalValue === dept.id ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <div className="flex flex-col overflow-hidden">
@@ -129,7 +132,9 @@ export function DepartmentCombobox({
                       <span className="text-xs text-muted-foreground truncate">
                         {dept.shortName ? `ย่อ: ${dept.shortName}` : ""}
                         {dept.shortName && dept.costCenterCode ? " | " : ""}
-                        {dept.costCenterCode ? `รหัส: ${dept.costCenterCode}` : ""}
+                        {dept.costCenterCode
+                          ? `รหัส: ${dept.costCenterCode}`
+                          : ""}
                       </span>
                     </div>
                   </CommandItem>

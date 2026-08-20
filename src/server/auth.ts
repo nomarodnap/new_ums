@@ -5,15 +5,15 @@ import { admin } from "better-auth/plugins";
 import { headers } from "next/headers";
 
 export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "pg",
-    }),
-    trustedOrigins: ["http://localhost:3000", "https://ums.fisheries.go.th"],
-    trustHost: true,
-    emailAndPassword: {
-        enabled: true,
-        sendResetPassword: async ({ user, url }) => {
-            const html = `
+  database: drizzleAdapter(db, {
+    provider: "pg",
+  }),
+  trustedOrigins: ["http://localhost:3000", "https://ums.fisheries.go.th"],
+  trustHost: true,
+  emailAndPassword: {
+    enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      const html = `
                 <div style="font-family: sans-serif; max-w-md; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
                     <h2 style="color: #333;">ยินดีต้อนรับสู่ระบบรายงานค่าสาธารณูปโภค</h2>
                     <p>สวัสดีคุณ ${user.name},</p>
@@ -28,30 +28,38 @@ export const auth = betterAuth({
                     </p>
                 </div>
             `;
-            const { sendEmail } = await import("@/lib/email");
-            await sendEmail(user.email, "ตั้งรหัสผ่านเพื่อเข้าใช้งานระบบรายงานค่าสาธารณูปโภค", html);
-        }
+      const { sendEmail } = await import("@/lib/email");
+      await sendEmail(
+        user.email,
+        "ตั้งรหัสผ่านเพื่อเข้าใช้งานระบบรายงานค่าสาธารณูปโภค",
+        html,
+      );
     },
-    user: {
-        additionalFields: {
-            departmentId: {
-                type: "string",
-                required: false,
-            },
-            phone: {
-                type: "string",
-                required: false,
-            }
-        }
+  },
+  user: {
+    additionalFields: {
+      departmentId: {
+        type: "string",
+        required: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
+      },
     },
-    plugins: [
-        admin()
-    ]
+  },
+  plugins: [admin()],
 });
 
 import { redirect } from "next/navigation";
 
-export type Role = "admin" | "auditor" | "strategy_finance" | "central_staff" | "regional_staff" | "user";
+export type Role =
+  | "admin"
+  | "auditor"
+  | "strategy_finance"
+  | "central_staff"
+  | "regional_staff"
+  | "user";
 
 export async function requireRole(allowed: Role[]) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -70,7 +78,7 @@ export async function requireRole(allowed: Role[]) {
     session: session.session,
     user: {
       ...session.user,
-      role: user.role as Role
-    }
+      role: user.role as Role,
+    },
   };
 }
