@@ -24,6 +24,7 @@ import {
   createBudgetCode,
   updateBudgetCode,
 } from "@/server/actions/budget-codes";
+import { ErrorSpeechBubble } from "@/components/ui/error-speech-bubble";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -107,7 +108,7 @@ export function BudgetCodeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={formAction} className="space-y-4 py-2">
+        <form noValidate action={formAction} className="space-y-4 py-2">
           <input
             type="hidden"
             name="isActive"
@@ -115,7 +116,7 @@ export function BudgetCodeDialog({
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid gap-2">
+            <div className="grid gap-2 relative">
               <Label htmlFor="fiscalYear">
                 ปีงบประมาณ (พ.ศ.) <span className="text-destructive">*</span>
               </Label>
@@ -124,7 +125,10 @@ export function BudgetCodeDialog({
                 onValueChange={(val) => val && setFiscalYear(val)}
                 name="fiscalYear"
               >
-                <SelectTrigger id="fiscalYear" className="w-full">
+                <SelectTrigger
+                  id="fiscalYear"
+                  className={state.fieldErrors?.fiscalYear ? "w-full border-rose-500 ring-2 ring-rose-500/20" : "w-full"}
+                >
                   <SelectValue placeholder="เลือกปีงบประมาณ">
                     {fiscalYear ? `พ.ศ. ${fiscalYear}` : "เลือกปีงบประมาณ"}
                   </SelectValue>
@@ -137,14 +141,10 @@ export function BudgetCodeDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {state.fieldErrors?.fiscalYear && (
-                <p className="text-xs text-destructive">
-                  {state.fieldErrors.fiscalYear[0]}
-                </p>
-              )}
+              <ErrorSpeechBubble message={state.fieldErrors?.fiscalYear} />
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-2 relative">
               <Label htmlFor="code">
                 รหัสงบประมาณ <span className="text-destructive">*</span>
               </Label>
@@ -153,13 +153,9 @@ export function BudgetCodeDialog({
                 name="code"
                 defaultValue={budgetCodeToEdit?.code || ""}
                 placeholder="เช่น 2800100000000000"
-                required
+                className={state.fieldErrors?.code ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
               />
-              {state.fieldErrors?.code && (
-                <p className="text-xs text-destructive">
-                  {state.fieldErrors.code[0]}
-                </p>
-              )}
+              <ErrorSpeechBubble message={state.fieldErrors?.code} />
             </div>
           </div>
 

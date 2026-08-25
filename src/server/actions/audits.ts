@@ -28,6 +28,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
   let isLateReceive = false;
   let isLatePayment = false;
   let isOverdueMoreThan2Months = false;
+  let isDisbursementOver2Months = false; // เบิกจ่ายใช้เวลาเกิน 2 เดือน
   let isWrongMonth = false;
   let isPhoneOverLimit = false; // เบิกค่าโทรศัพท์เกินเกณฑ์
   let isPhoneUsageOverLimit = false; // ใช้ค่าโทรศัพท์เกินเกณฑ์
@@ -58,22 +59,46 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
     }
   }
 
-  // 4. มีหนี้ค้างชำระ > 2 เดือน
-  // หักลบกันระหว่าง รอบบิลประจำเดือน กับ วันที่เบิกจ่ายแล้วเสร็จ เกิน 2 เดือน
-  if (bill.billingYear && bill.billingMonth) {
-    const endCompareDate = bill.paymentDate
-      ? new Date(bill.paymentDate)
-      : new Date();
+  // 4. มีหนี้ค้างชำระ > 2 เดือน (รวมเงื่อนไขเบิกจ่ายเกิน 2 เดือนเข้าด้วยกัน)
+  // เงื่อนไข:
+  // 1) หากยังไม่ได้รับใบแจ้งหนี้: ใช้รอบบิลประจำเดือน (billingYear, billingMonth) เทียบกับวันปัจจุบัน หากผลต่างเกิน 2 เดือนจะขึ้นสถานะ
+  // 2) หากได้รับใบแจ้งหนี้แล้ว แต่ยังไม่ได้เบิกจ่าย: ใช้วันที่ใบแจ้งหนี้ (invoiceDate) เทียบกับวันปัจจุบัน หากเกิน 2 เดือนจะขึ้นสถานะ
+  // 3) หากได้รับใบแจ้งหนี้แล้ว และเบิกจ่ายแล้ว: ใช้วันที่ใบแจ้งหนี้ (invoiceDate) เทียบกับวันที่เอกสารเบิกจ่าย (paymentDate) หากเกิน 2 เดือนจะขึ้นสถานะ
+  if (bill.invoiceStatus === "NOT_RECEIVED" || !bill.invoiceDate) {
+    // กรณีที่ 1: ยังไม่ได้รับใบแจ้งหนี้ (หรือไม่มีวันที่ใบแจ้งหนี้) -> เทียบรอบบิลกับวันปัจจุบัน
+    if (bill.billingYear && bill.billingMonth) {
+      const now = new Date();
+      const diffInMonths =
+        now.getFullYear() * 12 +
+        now.getMonth() +
+        1 -
+        (bill.billingYear * 12 + bill.billingMonth);
 
-    // นับแค่เดือน: (ปีที่จ่าย * 12 + เดือนที่จ่าย) - (ปีบิล * 12 + เดือนบิล)
-    const diffInMonths =
-      endCompareDate.getFullYear() * 12 +
-      endCompareDate.getMonth() +
-      1 -
-      (bill.billingYear * 12 + bill.billingMonth);
+      if (diffInMonths > 2) {
+        isOverdueMoreThan2Months = true;
+      }
+    }
+  } else if (bill.invoiceStatus === "RECEIVED" && bill.invoiceDate) {
+    const invDate = new Date(bill.invoiceDate);
 
-    if (diffInMonths > 2) {
-      isOverdueMoreThan2Months = true;
+    if (bill.paymentStatus === "PAID" && bill.paymentDate) {
+      // กรณีที่ 3: ได้รับใบแจ้งหนี้แล้ว และเบิกจ่ายแล้ว -> เทียบวันที่ใบแจ้งหนี้ กับ วันที่เอกสารเบิกจ่าย
+      const payDate = new Date(bill.paymentDate);
+      if (
+        isAfter(payDate, addMonths(invDate, 2)) ||
+        differenceInDays(payDate, invDate) > 60
+      ) {
+        isOverdueMoreThan2Months = true;
+      }
+    } else {
+      // กรณีที่ 2: ได้รับใบแจ้งหนี้แล้ว แต่ยังไม่ได้เบิกจ่าย -> เทียบวันที่ใบแจ้งหนี้ กับ วันเดือนปีปัจจุบัน
+      const now = new Date();
+      if (
+        isAfter(now, addMonths(invDate, 2)) ||
+        differenceInDays(now, invDate) > 60
+      ) {
+        isOverdueMoreThan2Months = true;
+      }
     }
   }
 
@@ -93,14 +118,16 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
     }
   }
 
-  // 6. เบิกจ่ายค่าโทรศัพท์เกินสิทธิ (จำนวนเงินที่เบิกจ่าย paidAmount ห้ามเกินยอดรวมที่เบิกได้จริงตามเพดานสิทธิแต่ละเบอร์)
+  // 6. ตรวจสอบค่าโทรศัพท์: ใช้ค่าโทรศัพท์เกินเกณฑ์ และ เบิกค่าโทรศัพท์เกินเกณฑ์
   if (
     (bill.utilityType === "ค่าโทรศัพท์" ||
       bill.utilityType === "ค่าสื่อสาร&โทรคมนาคม") &&
-    bill.paidAmount &&
     bill.serviceNumber
   ) {
-    const paid = Number(bill.paidAmount);
+    const paid =
+      bill.paidAmount !== null && bill.paidAmount !== undefined
+        ? Number(bill.paidAmount)
+        : null;
     const serviceNumbers = bill.serviceNumber
       .split(",")
       .map((s) => s.trim())
@@ -155,7 +182,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
         service.phoneReimbursementLimit > 0
       ) {
         hasAnyLimitRule = true;
-        // ใช้ค่าโทรศัพท์เกินเกณฑ์ (ยอดตามใบแจ้งหนี้/Breakdown เกินสิทธิ)
+        // ใช้ค่าโทรศัพท์เกินเกณฑ์: ตรวจสอบจากยอดตามใบแจ้งหนี้/Breakdown เทียบกับสิทธิ (ขึ้นข้อสังเกตได้ทันทีตั้งแต่ยังไม่เบิกจ่าย)
         if (billedForNum > service.phoneReimbursementLimit + 0.001) {
           isPhoneUsageOverLimit = true;
         }
@@ -172,8 +199,12 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
       }
     }
 
-    // เบิกค่าโทรศัพท์เกินเกณฑ์: หากมีเบอร์ที่มีเพดานสิทธิ และยอดที่เบิกจ่ายจริง (paidAmount) เกินยอดรวมสิทธิที่เบิกได้จริง
-    if (hasAnyLimitRule && paid > maxReimbursableTotal + 0.001) {
+    // เบิกค่าโทรศัพท์เกินเกณฑ์: ตรวจสอบเมื่อมีการระบุยอดที่เบิกจ่ายจริง (paidAmount)
+    if (
+      paid !== null &&
+      hasAnyLimitRule &&
+      paid > maxReimbursableTotal + 0.001
+    ) {
       isPhoneOverLimit = true;
     }
   }
@@ -215,6 +246,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
     isLateReceive ||
     isLatePayment ||
     isOverdueMoreThan2Months ||
+    isDisbursementOver2Months ||
     isWrongMonth ||
     isPhoneOverLimit ||
     isPhoneUsageOverLimit ||
@@ -230,6 +262,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
           isLateReceive,
           isLatePayment,
           isOverdueMoreThan2Months,
+          isDisbursementOver2Months,
           isWrongMonth,
           isPhoneOverLimit,
           isPhoneUsageOverLimit,
@@ -247,6 +280,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
         isLateReceive,
         isLatePayment,
         isOverdueMoreThan2Months,
+        isDisbursementOver2Months,
         isWrongMonth,
         isPhoneOverLimit,
         isPhoneUsageOverLimit,
@@ -267,6 +301,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
           isLateReceive: false,
           isLatePayment: false,
           isOverdueMoreThan2Months: false,
+          isDisbursementOver2Months: false,
           isWrongMonth: false,
           isPhoneOverLimit: false,
           isPhoneUsageOverLimit: false,
@@ -392,6 +427,7 @@ export async function unflagManualAnomaly(billId: string) {
         existingAudit.isLateReceive ||
         existingAudit.isLatePayment ||
         existingAudit.isOverdueMoreThan2Months ||
+        existingAudit.isDisbursementOver2Months ||
         existingAudit.isWrongMonth ||
         existingAudit.isPhoneOverLimit ||
         existingAudit.isPhoneUsageOverLimit ||
@@ -417,8 +453,21 @@ export async function unflagManualAnomaly(billId: string) {
       });
     }
 
-    return { success: true };
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "ไม่มีสิทธิ์ดำเนินการ หรือเกิดข้อผิดพลาด" };
+    }
+  }
+
+export async function recheckAllAudits() {
+  try {
+    const allBills = await db.select({ id: utilityBills.id }).from(utilityBills);
+    for (const bill of allBills) {
+      await runAuditChecks(bill.id, "SYSTEM");
+    }
+    return { success: true, count: allBills.length };
   } catch (error) {
-    return { success: false, error: "ไม่มีสิทธิ์ดำเนินการ หรือเกิดข้อผิดพลาด" };
+    console.error("Error in recheckAllAudits:", error);
+    return { success: false, error: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" };
   }
 }

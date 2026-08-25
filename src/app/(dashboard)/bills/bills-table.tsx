@@ -126,6 +126,7 @@ type Bill = {
   isIncompleteReceiveDate?: boolean | null;
   isLatePayment?: boolean | null;
   isOverdueMoreThan2Months?: boolean | null;
+  isDisbursementOver2Months?: boolean | null;
   isWrongMonth?: boolean | null;
   isPhoneOverLimit?: boolean | null;
   isPhoneUsageOverLimit?: boolean | null;
@@ -377,23 +378,24 @@ export function BillsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Apple-style Filter Toolbar */}
+      <div className="p-4 rounded-2xl bg-card/85 dark:bg-card/70 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="ค้นหารหัสรายงาน, หน่วยงาน, รหัสเครื่องวัด, เลขที่ใบแจ้งหนี้..."
-            className="pl-8"
+            className="pl-9 h-9.5 rounded-xl bg-background/60"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={monthFilter}
             onValueChange={(v) => v && setMonthFilter(v)}
           >
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[125px] h-9.5 rounded-xl text-xs">
               <SelectValue placeholder="เดือน">
                 {monthFilter === "ทุกเดือน"
                   ? "ทุกเดือน"
@@ -414,7 +416,7 @@ export function BillsTable({
             value={yearFilter}
             onValueChange={(v) => v && setYearFilter(v)}
           >
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-[105px] h-9.5 rounded-xl text-xs">
               <SelectValue placeholder="ปี">
                 {yearFilter === "ทุกปี" ? "ทุกปี" : parseInt(yearFilter) + 543}
               </SelectValue>
@@ -428,11 +430,12 @@ export function BillsTable({
               ))}
             </SelectContent>
           </Select>
+
           <Select
             value={utilityFilter}
             onValueChange={(v) => v && setUtilityFilter(v)}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[155px] h-9.5 rounded-xl text-xs">
               <SelectValue placeholder="ประเภท">{utilityFilter}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -451,7 +454,7 @@ export function BillsTable({
             value={statusFilter}
             onValueChange={(v) => v && setStatusFilter(v)}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[150px] h-9.5 rounded-xl text-xs">
               <SelectValue placeholder="สถานะ">
                 {statusFilter === "ทุกสถานะ"
                   ? "ทุกสถานะ"
@@ -476,8 +479,8 @@ export function BillsTable({
             value={anomalyFilter}
             onValueChange={(v) => v && setAnomalyFilter(v)}
           >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="สถานะความผิดปกติ">
+            <SelectTrigger className="w-[150px] h-9.5 rounded-xl text-xs">
+              <SelectValue placeholder="ความผิดปกติ">
                 {anomalyFilter === "ทั้งหมด" ? "สถานะความผิดปกติ" : anomalyFilter}
               </SelectValue>
             </SelectTrigger>
@@ -492,8 +495,8 @@ export function BillsTable({
             value={reviewFilter}
             onValueChange={(v) => v && setReviewFilter(v)}
           >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="สถานะการตรวจสอบ">
+            <SelectTrigger className="w-[145px] h-9.5 rounded-xl text-xs">
+              <SelectValue placeholder="การตรวจสอบ">
                 {reviewFilter === "ทั้งหมด" ? "สถานะการตรวจสอบ" : reviewFilter}
               </SelectValue>
             </SelectTrigger>
@@ -506,10 +509,10 @@ export function BillsTable({
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-card/90 dark:bg-card/70 backdrop-blur-xl shadow-xs overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow>
               <TableHead className="w-[220px]">หน่วยงาน / ประเภท</TableHead>
               <TableHead>รหัสรายงาน / เครื่องวัด</TableHead>
               <TableHead>รอบบิล</TableHead>
@@ -526,21 +529,21 @@ export function BillsTable({
               <TableRow>
                 <TableCell
                   colSpan={showAuditStatus ? 7 : 6}
-                  className="text-center h-32 text-muted-foreground"
+                  className="text-center h-32 text-muted-foreground text-sm"
                 >
-                  ไม่มีข้อมูลค่าใช้จ่าย
+                  ไม่มีข้อมูลค่าใช้จ่ายที่ตรงกับเงื่อนไข
                 </TableCell>
               </TableRow>
             )}
             {filteredData.map((bill) => (
               <TableRow
                 key={bill.id}
-                className="hover:bg-muted/50 transition-colors group"
+                className="group transition-colors"
               >
                 <TableCell>
                   <div className="flex flex-col">
                     <span
-                      className="font-medium truncate max-w-[230px]"
+                      className="font-medium text-foreground truncate max-w-[230px]"
                       title={bill.departmentName || "ไม่ระบุหน่วยงาน"}
                     >
                       {bill.departmentName || "ไม่ระบุหน่วยงาน"}
@@ -552,7 +555,7 @@ export function BillsTable({
                       </div>
                       {bill.isPendingBillOnly && (
                         <span
-                          className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-medium truncate max-w-[150px]"
+                          className="text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40 font-medium truncate max-w-[150px]"
                           title={`ฝากเบิก: ${bill.depositUnitName || bill.depositUnitId || "-"}`}
                         >
                           ฝากเบิก:{" "}
@@ -565,18 +568,18 @@ export function BillsTable({
                 <TableCell>
                   <div className="flex flex-col space-y-1">
                     {bill.billCode && (
-                      <span className="text-xs font-semibold text-primary/80 mb-0.5 border border-primary/20 bg-primary/5 rounded px-1.5 py-0.5 w-fit">
+                      <span className="text-[11px] font-semibold text-primary mb-0.5 border border-primary/20 bg-primary/10 rounded-full px-2 py-0.5 w-fit">
                         {bill.billCode}
                       </span>
                     )}
                     {bill.serviceNumber ? (
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium text-foreground">
                         {bill.serviceNumber}
                       </span>
                     ) : (
                       <span className="text-sm text-muted-foreground">-</span>
                     )}
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-0.5">
                       {bill.invoiceNumber && (
                         <span className="text-xs text-muted-foreground">
                           INV: {bill.invoiceNumber}
@@ -586,15 +589,15 @@ export function BillsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col space-y-1">
-                    <span className="font-medium">
+                  <div className="flex flex-col space-y-0.5">
+                    <span className="font-medium text-foreground text-sm">
                       {getMonthName(bill.billingMonth)} {bill.billingYear + 543}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-col space-y-1 items-end">
-                    <span className="font-medium text-sm">
+                    <span className="font-semibold text-sm text-foreground">
                       {bill.invoiceAmount
                         ? Number(bill.invoiceAmount).toLocaleString("th-TH", {
                             minimumFractionDigits: 2,
@@ -603,12 +606,12 @@ export function BillsTable({
                         : "-"}
                     </span>
                     {bill.usageAmount && (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[11px] text-muted-foreground">
                         {Number(bill.usageAmount).toLocaleString("th-TH")} หน่วย
                       </span>
                     )}
                     {bill.paymentStatus === "PAID" && bill.paidAmount && (
-                      <span className="text-xs text-green-600 dark:text-green-400">
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                         จ่าย:{" "}
                         {Number(bill.paidAmount).toLocaleString("th-TH", {
                           minimumFractionDigits: 2,
@@ -625,16 +628,10 @@ export function BillsTable({
                         bill.invoiceStatus === "NOT_RECEIVED"
                           ? "outline"
                           : bill.paymentStatus === "PAID"
-                            ? "default"
-                            : "outline"
+                            ? "success"
+                            : "warning"
                       }
-                      className={
-                        bill.invoiceStatus === "NOT_RECEIVED"
-                          ? "text-slate-400 border-slate-200"
-                          : bill.paymentStatus === "PAID"
-                            ? "bg-green-600 hover:bg-green-700"
-                            : "text-amber-600 border-amber-200"
-                      }
+                      className="text-[11px] font-medium"
                     >
                       {bill.invoiceStatus === "NOT_RECEIVED"
                         ? "ยังไม่ได้รับใบแจ้งหนี้"
@@ -644,12 +641,15 @@ export function BillsTable({
                     </Badge>
                     {(bill.invoiceStatus === "NOT_RECEIVED" ||
                       bill.paymentStatus === "PENDING") && (
-                      <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded font-medium shadow-sm">
+                      <Badge
+                        variant="destructive"
+                        className="text-[10px] h-4.5 px-2 font-normal"
+                      >
                         ค้างชำระ
-                      </span>
+                      </Badge>
                     )}
                     {bill.paymentStatus === "PAID" && bill.paymentDocNumber && (
-                      <span className="text-[10px] text-muted-foreground mt-1 bg-muted px-1.5 py-0.5 rounded border">
+                      <span className="text-[10px] text-muted-foreground mt-0.5 bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 rounded-full border border-black/[0.04] dark:border-white/[0.06]">
                         {bill.docType ? `${bill.docType} ` : ""}
                         {bill.paymentDocNumber}
                       </span>
@@ -662,15 +662,15 @@ export function BillsTable({
                       {bill.auditStatus === "PENDING_CORRECTION" ? (
                         <>
                           <Badge
-                            variant="outline"
-                            className="bg-amber-100 text-amber-700 whitespace-nowrap"
+                            variant="warning"
+                            className="whitespace-nowrap text-[11px]"
                           >
                             พบข้อสังเกต
                           </Badge>
                           {getAuditIssueTexts(bill).length > 0 && (
-                            <div className="flex flex-col text-[10px] text-amber-700 items-start text-left bg-amber-50/50 p-1.5 rounded w-full max-w-[140px] leading-tight border border-amber-100">
+                            <div className="flex flex-col text-[10px] text-amber-800 dark:text-amber-300 items-start text-left bg-amber-50/80 dark:bg-amber-950/40 p-2 rounded-xl w-full max-w-[140px] leading-tight border border-amber-200/60 dark:border-amber-800/40">
                               {getAuditIssueTexts(bill).map((issue, idx) => (
-                                <span key={idx}>- {issue}</span>
+                                <span key={idx}>• {issue}</span>
                               ))}
                             </div>
                           )}
@@ -680,14 +680,10 @@ export function BillsTable({
                           variant={
                             !bill.auditStatus ||
                             bill.auditStatus === "CORRECTED"
-                              ? "secondary"
-                              : "outline"
+                              ? "success"
+                              : "secondary"
                           }
-                          className={
-                            !bill.auditStatus
-                              ? "bg-green-100 text-green-700 whitespace-nowrap"
-                              : "bg-blue-100 text-blue-700 whitespace-nowrap"
-                          }
+                          className="whitespace-nowrap text-[11px]"
                         >
                           {!bill.auditStatus ? "ปกติ" : "แก้ไขแล้ว"}
                         </Badge>
@@ -696,9 +692,9 @@ export function BillsTable({
                       {bill.isReviewed && (
                         <Badge
                           variant="outline"
-                          className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-1.5 py-0"
+                          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full"
                         >
-                          ตรวจสอบแล้ว
+                          ✓ ตรวจสอบแล้ว
                         </Badge>
                       )}
                     </div>

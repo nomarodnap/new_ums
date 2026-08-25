@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ArrowUpRight, Zap, Droplet, Phone, Wifi, Mail } from "lucide-react";
 
 export type RecentAnomaly = {
   id: string;
@@ -23,6 +23,8 @@ export type RecentAnomaly = {
   manualAnomalyReason: string | null;
   isLateReceive: boolean | null;
   isLatePayment: boolean | null;
+  isOverdueMoreThan2Months?: boolean | null;
+  isDisbursementOver2Months?: boolean | null;
 };
 
 const THAI_MONTHS = [
@@ -58,11 +60,27 @@ export function RecentAnomaliesTable({
     return new Intl.NumberFormat("th-TH", {
       style: "currency",
       currency: "THB",
+      maximumFractionDigits: 0,
     }).format(Number(amount));
   };
 
+  const getUtilityIcon = (type: string) => {
+    switch (type) {
+      case "ค่าไฟฟ้า":
+        return <Zap className="size-3.5 text-amber-500" />;
+      case "ค่าน้ำประปา":
+        return <Droplet className="size-3.5 text-blue-500" />;
+      case "ค่าโทรศัพท์":
+        return <Phone className="size-3.5 text-emerald-500" />;
+      case "ค่าบริการสื่อสารและโทรคมนาคม":
+        return <Wifi className="size-3.5 text-purple-500" />;
+      default:
+        return <Mail className="size-3.5 text-slate-500" />;
+    }
+  };
+
   return (
-    <div className="rounded-md border">
+    <div className="overflow-hidden rounded-xl">
       <Table>
         <TableHeader>
           <TableRow>
@@ -71,7 +89,7 @@ export function RecentAnomaliesTable({
             <TableHead>รอบบิล</TableHead>
             <TableHead className="text-right">ยอดชำระ</TableHead>
             <TableHead>ปัญหาที่พบ</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
+            <TableHead className="w-[45px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -81,21 +99,27 @@ export function RecentAnomaliesTable({
               issues.push(anomaly.manualAnomalyReason || "ผิดปกติ (ระบุเอง)");
             if (anomaly.isLateReceive) issues.push("ลงรับบิลล่าช้า");
             if (anomaly.isLatePayment) issues.push("จ่ายล่าช้า");
+            if (anomaly.isOverdueMoreThan2Months) issues.push("ค้างชำระเกิน 2 เดือน");
 
             return (
-              <TableRow key={anomaly.id}>
+              <TableRow key={anomaly.id} className="group">
                 <TableCell
-                  className="font-medium max-w-[200px] truncate"
+                  className="font-medium max-w-[200px] truncate text-foreground"
                   title={anomaly.departmentName || ""}
                 >
                   {anomaly.departmentName || "ไม่ระบุ"}
                 </TableCell>
-                <TableCell>{anomaly.utilityType}</TableCell>
                 <TableCell>
+                  <div className="flex items-center gap-1.5 text-xs text-foreground/90 font-medium">
+                    {getUtilityIcon(anomaly.utilityType)}
+                    <span>{anomaly.utilityType}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                   {THAI_MONTHS[anomaly.billingMonth - 1]}{" "}
                   {anomaly.billingYear + 543}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right font-semibold text-xs text-foreground">
                   {formatCurrency(anomaly.invoiceAmount)}
                 </TableCell>
                 <TableCell>
@@ -104,7 +128,7 @@ export function RecentAnomaliesTable({
                       <Badge
                         key={idx}
                         variant="destructive"
-                        className="text-[10px] whitespace-nowrap"
+                        className="text-[10px] h-5 px-2 font-normal"
                       >
                         {issue}
                       </Badge>
@@ -114,9 +138,9 @@ export function RecentAnomaliesTable({
                 <TableCell>
                   <Link
                     href="/all-bills"
-                    className="text-muted-foreground hover:text-primary"
+                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-all"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ArrowUpRight className="size-4" />
                   </Link>
                 </TableCell>
               </TableRow>

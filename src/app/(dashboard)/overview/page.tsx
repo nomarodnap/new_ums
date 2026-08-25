@@ -15,6 +15,8 @@ import {
   PlusCircle,
   FileText,
   Building2,
+  CheckCircle2,
+  Trophy,
 } from "lucide-react";
 import {
   TrendChart,
@@ -24,6 +26,7 @@ import { RecentAnomaliesTable } from "@/components/dashboard/recent-anomalies-ta
 import Link from "next/link";
 import { getDashboardStats } from "@/server/actions/dashboard";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/server/auth";
 
 export default async function ConsolidatedDashboardOverview() {
@@ -39,18 +42,19 @@ export default async function ConsolidatedDashboardOverview() {
   };
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">
-              แดชบอร์ดภาพรวมทุกหน่วยงาน
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              แดชบอร์ดภาพรวมทั้งกรม
             </h1>
-            <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-0.5 rounded-full">
-              Admin Only
-            </span>
+            <Badge variant="default" className="font-semibold text-xs">
+              Admin & Exec Only
+            </Badge>
           </div>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             ภาพรวมการบริหารจัดการค่าสาธารณูปโภค 292 หน่วยงาน (ส่วนกลางและภูมิภาค)
           </p>
         </div>
@@ -58,134 +62,165 @@ export default async function ConsolidatedDashboardOverview() {
         <Button
           render={<Link href="/" />}
           variant="outline"
-          className="self-start sm:self-auto gap-2"
+          className="self-start sm:self-auto gap-2 shadow-xs"
         >
-          <Building2 className="h-4 w-4 text-muted-foreground" />{" "}
+          <Building2 className="size-4 text-muted-foreground" />{" "}
           กลับไปแดชบอร์ดหน่วยงานตนเอง
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card className="border-blue-200 dark:border-blue-800/50 dark:bg-slate-900/50 backdrop-blur-md transition-all duration-300 hover:shadow-lg dark:hover:shadow-blue-900/20 hover:-translate-y-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-blue-50/50 dark:bg-blue-900/20">
-            <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-300">
-              บิลที่บันทึกเข้าระบบทั้งกรม (เดือนนี้)
-            </CardTitle>
-            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
-              {stats.totalInvoicesCurrentMonth.toLocaleString()} รายการ
+      {/* KPI Metric Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Metric 1 */}
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                บันทึกบิลทั้งกรม (เดือนนี้)
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                <FileText className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              จากทุกหน่วยงานทั่วประเทศ
-            </p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                {stats.totalInvoicesCurrentMonth.toLocaleString()}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                จากทุกหน่วยงานทั่วประเทศ
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 dark:border-green-800/50 dark:bg-slate-900/50 backdrop-blur-md transition-all duration-300 hover:shadow-lg dark:hover:shadow-green-900/20 hover:-translate-y-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-green-50/50 dark:bg-green-900/20">
-            <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">
-              เบิกจ่ายแล้วทั้งกรม (เดือนนี้)
-            </CardTitle>
-            <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalPaidCurrentMonth)}
+        {/* Metric 2 */}
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                เบิกจ่ายแล้วทั้งกรม (เดือนนี้)
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                <CheckCircle2 className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ยอดเบิกจ่ายสะสมเดือนปัจจุบัน
-            </p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                {formatCurrency(stats.totalPaidCurrentMonth)}
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                ยอดเบิกจ่ายสะสมเดือนปัจจุบัน
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-orange-200 dark:border-orange-800/50 dark:bg-slate-900/50 backdrop-blur-md transition-all duration-300 hover:shadow-lg dark:hover:shadow-orange-900/20 hover:-translate-y-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-orange-50/50 dark:bg-orange-900/20">
-            <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-300">
-              ค้างชำระทั้งหมด (ทั้งกรม)
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {stats.totalPendingBills.toLocaleString()} รายการ
+        {/* Metric 3 */}
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                ค้างชำระทั้งหมด (ทั้งกรม)
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                <AlertTriangle className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-1">
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+                {stats.totalPendingBills.toLocaleString()}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
               <Link
                 href="/all-bills"
-                className="hover:underline inline-flex items-center"
+                className="text-xs text-amber-600/90 dark:text-amber-400/90 hover:underline inline-flex items-center font-medium mt-1 gap-1"
               >
-                ดูรายการทั้งหมด <ArrowRight className="ml-1 h-3 w-3" />
+                ดูรายการทั้งหมด <ArrowRight className="size-3" />
               </Link>
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card
-          className={
-            stats.totalAnomalies > 0
-              ? "border-red-200 dark:border-red-800/50 dark:bg-slate-900/50 backdrop-blur-md transition-all duration-300 hover:shadow-lg dark:hover:shadow-red-900/20 hover:-translate-y-1"
-              : "border-slate-200 dark:border-slate-800/50 dark:bg-slate-900/50 backdrop-blur-md transition-all duration-300 hover:shadow-lg dark:hover:shadow-slate-800/50 hover:-translate-y-1"
-          }
-        >
-          <CardHeader
-            className={`flex flex-row items-center justify-between space-y-0 pb-2 ${stats.totalAnomalies > 0 ? "bg-red-50/50 dark:bg-red-900/20" : "bg-slate-50/50 dark:bg-slate-800/50"}`}
-          >
-            <CardTitle
-              className={`text-sm font-medium ${stats.totalAnomalies > 0 ? "text-red-800 dark:text-red-300" : "text-slate-800 dark:text-slate-300"}`}
-            >
-              ตรวจสอบพบความผิดปกติทั้งกรม
-            </CardTitle>
-            <Activity
-              className={`h-4 w-4 ${stats.totalAnomalies > 0 ? "text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-400"}`}
-            />
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div
-              className={`text-2xl font-bold ${stats.totalAnomalies > 0 ? "text-red-700 dark:text-red-400" : ""}`}
-            >
-              {stats.totalAnomalies.toLocaleString()} รายการ
+        {/* Metric 4 */}
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                พบความผิดปกติทั้งกรม
+              </span>
+              <div
+                className={`flex size-9 items-center justify-center rounded-xl ${
+                  stats.totalAnomalies > 0
+                    ? "bg-destructive/10 text-destructive dark:bg-destructive/20"
+                    : "bg-slate-500/10 text-slate-500 dark:bg-slate-500/20 dark:text-slate-400"
+                }`}
+              >
+                <Activity className="size-4.5" />
+              </div>
             </div>
-            <p
-              className={`text-xs mt-1 ${stats.totalAnomalies > 0 ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`}
-            >
+            <div className="mt-4">
+              <div
+                className={`text-2xl sm:text-3xl font-bold tracking-tight ${
+                  stats.totalAnomalies > 0
+                    ? "text-destructive"
+                    : "text-foreground"
+                }`}
+              >
+                {stats.totalAnomalies.toLocaleString()}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
               <Link
                 href="/all-bills"
-                className="hover:underline inline-flex items-center"
+                className={`text-xs hover:underline inline-flex items-center font-medium mt-1 gap-1 ${
+                  stats.totalAnomalies > 0
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+                }`}
               >
-                ดูบิลที่พบความผิดปกติ <ArrowRight className="ml-1 h-3 w-3" />
+                ดูบิลที่พบความผิดปกติ <ArrowRight className="size-3" />
               </Link>
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-6">
-        <Card className="col-span-1 md:col-span-2 lg:col-span-5">
-          <CardHeader>
-            <CardTitle>แนวโน้มการเบิกจ่ายค่าสาธารณูปโภค (ทั้งกรม)</CardTitle>
+      {/* Analytics Charts */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-1 md:col-span-2 lg:col-span-5 border-black/[0.06] dark:border-white/[0.08]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold tracking-tight">
+              แนวโน้มการเบิกจ่ายค่าสาธารณูปโภค (ทั้งกรม)
+            </CardTitle>
             <CardDescription>
-              กราฟเปรียบเทียบค่าใช้จ่ายแต่ละประเภทสาธารณูปโภค 292 หน่วยงาน (12
-              เดือนย้อนหลัง)
+              กราฟเปรียบเทียบค่าใช้จ่ายแต่ละประเภทสาธารณูปโภค 292 หน่วยงาน (12 เดือนย้อนหลัง)
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {stats.trendData.length > 0 ? (
               <TrendChart data={stats.trendData} />
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                ไม่มีข้อมูลเพียงพอ
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                ไม่มีข้อมูลเพียงพอสำหรับการแสดงกราฟ
               </div>
             )}
           </CardContent>
         </Card>
-        <Card className="col-span-1 md:col-span-2 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>สถานะบิลทั้งกรม</CardTitle>
+
+        <Card className="col-span-1 md:col-span-2 lg:col-span-2 border-black/[0.06] dark:border-white/[0.08]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold tracking-tight">
+              สถานะบิลทั้งกรม
+            </CardTitle>
             <CardDescription>สัดส่วนสถานะบิลทั้งหมดของทุกหน่วยงาน</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {stats.statusData.some((d) => d.value > 0) ? (
               <StatusPieChart data={stats.statusData} />
             ) : (
@@ -197,26 +232,50 @@ export default async function ConsolidatedDashboardOverview() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-        <Card>
+      {/* Tables Grid */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-black/[0.06] dark:border-white/[0.08]">
           <CardHeader>
-            <CardTitle>รายการบิลที่พบความผิดปกติล่าสุด (ทั้งกรม)</CardTitle>
-            <CardDescription>
-              5 รายการล่าสุดที่ถูกปักธงหรือมีข้อมูลไม่สอดคล้อง
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold tracking-tight">
+                  รายการบิลที่พบความผิดปกติล่าสุด (ทั้งกรม)
+                </CardTitle>
+                <CardDescription>
+                  5 รายการล่าสุดที่ถูกปักธงหรือมีข้อมูลไม่สอดคล้อง
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                render={<Link href="/all-bills" />}
+                className="text-xs"
+              >
+                ดูทั้งหมด <ArrowRight className="size-3.5 ml-1" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <RecentAnomaliesTable anomalies={stats.recentAnomalies as any} />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-black/[0.06] dark:border-white/[0.08]">
           <CardHeader>
-            <CardTitle>5 อันดับหน่วยงานที่เบิกจ่ายสูงสุด (สะสม)</CardTitle>
-            <CardDescription>ยอดรวมเบิกจ่ายแล้วของแต่ละหน่วยงาน</CardDescription>
+            <div className="flex items-center gap-2">
+              <Trophy className="size-4.5 text-amber-500" />
+              <div>
+                <CardTitle className="text-base font-semibold tracking-tight">
+                  5 อันดับหน่วยงานที่เบิกจ่ายสูงสุด
+                </CardTitle>
+                <CardDescription>
+                  ยอดรวมเบิกจ่ายแล้วของแต่ละหน่วยงาน (สะสม)
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6 mt-2">
+            <div className="space-y-4.5 mt-1">
               {stats.topDepartments.length > 0 ? (
                 stats.topDepartments.map((dept, i) => {
                   const maxAmount = Math.max(
@@ -226,22 +285,22 @@ export default async function ConsolidatedDashboardOverview() {
                     maxAmount > 0 ? (Number(dept.amount) / maxAmount) * 100 : 0;
 
                   return (
-                    <div key={i} className="flex items-center">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center mr-4 text-primary font-bold">
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                         {i + 1}
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium leading-none">
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                             {dept.name}
                           </p>
-                          <p className="text-sm font-medium">
+                          <p className="text-xs sm:text-sm font-semibold text-foreground shrink-0">
                             {formatCurrency(Number(dept.amount))}
                           </p>
                         </div>
-                        <div className="w-full bg-secondary/50 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-muted dark:bg-card/80 h-2 rounded-full overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-primary to-teal-400 dark:from-primary dark:to-cyan-400 h-full rounded-full transition-all duration-500 ease-in-out"
+                            className="bg-gradient-to-r from-primary to-primary/80 h-full rounded-full transition-all duration-500 ease-out"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -258,6 +317,7 @@ export default async function ConsolidatedDashboardOverview() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
+

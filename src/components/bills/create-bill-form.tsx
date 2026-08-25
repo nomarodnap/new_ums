@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DatePickerBE } from "@/components/ui/date-picker-be";
 import { MonthPickerBE } from "@/components/ui/month-picker-be";
+import { ErrorSpeechBubble } from "@/components/ui/error-speech-bubble";
 import {
   Building2,
   Receipt,
@@ -33,9 +34,12 @@ import {
   X,
   Settings,
   Banknote,
+  AlertCircle,
+  FileText,
 } from "lucide-react";
 import { DepartmentServicesSheet } from "@/app/(dashboard)/departments/department-services-sheet";
 import { DepartmentCombobox } from "@/components/ui/department-combobox";
+import { cn } from "@/lib/utils";
 
 type Department = {
   id: string;
@@ -91,6 +95,16 @@ export function CreateBillForm({
   const [depositUnitId, setDepositUnitId] = useState(() => {
     if (defaultDepartmentId) {
       const dept = departments.find((d) => d.id === defaultDepartmentId);
+      if (dept?.type === "central") {
+        const fin = departments.find(
+          (d) =>
+            d.fullName.includes("กองบริหารการคลัง") ||
+            d.shortName === "กบค." ||
+            d.shortName === "กบค" ||
+            d.fullName.includes("การคลัง"),
+        );
+        if (fin) return fin.id;
+      }
       if (dept && !dept.costCenterCode) return dept.depositUnit || "";
     }
     return "";
@@ -100,10 +114,23 @@ export function CreateBillForm({
   const [accountCode, setAccountCode] = useState("");
   const [budgetCode, setBudgetCode] = useState("");
   const [billingMonthStr, setBillingMonthStr] = useState<string>("");
+  const [invoiceDate, setInvoiceDate] = useState<string>("");
+  const [receivedDate, setReceivedDate] = useState<string>("");
+  const [sentToDisbursingDate, setSentToDisbursingDate] = useState<string>("");
+  const [disbursingReceivedDate, setDisbursingReceivedDate] = useState<string>("");
+  const [paymentDate, setPaymentDate] = useState<string>("");
+  const [documentRef, setDocumentRef] = useState<string>("");
+  const [unitsUsed, setUnitsUsed] = useState<string>("");
+  const [paymentDocNumber, setPaymentDocNumber] = useState<string>("");
+  const [docType, setDocType] = useState<string>("");
   const [estimatedAmount, setEstimatedAmount] = useState<number | "">("");
+  const [selectedInvoiceFile, setSelectedInvoiceFile] = useState<File | null>(null);
+  const [selectedReceiptFile, setSelectedReceiptFile] = useState<File | null>(null);
+  const [selectedDirectPaymentFile, setSelectedDirectPaymentFile] = useState<File | null>(null);
   const [serviceAmounts, setServiceAmounts] = useState<Record<string, string>>(
     {},
   );
+
 
   const currentFiscalYear = useMemo(() => {
     if (billingMonthStr) {
@@ -223,6 +250,28 @@ export function CreateBillForm({
 
   const selectedDeptData = departments.find((d) => d.id === selectedDept);
 
+  const financeDept = useMemo(() => {
+    return (
+      departments.find(
+        (d) =>
+          d.fullName.includes("กองบริหารการคลัง") ||
+          d.shortName === "กบค." ||
+          d.shortName === "กบค" ||
+          d.fullName.includes("การคลัง"),
+      ) || null
+    );
+  }, [departments]);
+
+  const isCentralDept = selectedDeptData?.type === "central";
+
+  useEffect(() => {
+    if (isCentralDept && disbursingType === "หน่วยงานฝากเบิก" && financeDept) {
+      if (depositUnitId !== financeDept.id) {
+        setDepositUnitId(financeDept.id);
+      }
+    }
+  }, [isCentralDept, disbursingType, financeDept, depositUnitId]);
+
   const getDeptTypeName = (type: string | null | undefined) => {
     if (type === "central") return "ส่วนกลาง";
     if (type === "regional_central") return "ส่วนภูมิภาค (ส่วนกลาง)";
@@ -240,7 +289,11 @@ export function CreateBillForm({
     const dept = departments.find((d) => d.id === val);
     if (dept && !dept.costCenterCode) {
       setDisbursingType("หน่วยงานฝากเบิก");
-      setDepositUnitId(dept.depositUnit || "");
+      if (dept.type === "central" && financeDept) {
+        setDepositUnitId(financeDept.id);
+      } else {
+        setDepositUnitId(dept.depositUnit || "");
+      }
     } else {
       setDisbursingType("หน่วยงานที่เบิกจ่าย");
       setDepositUnitId("");
@@ -251,8 +304,12 @@ export function CreateBillForm({
     if (!val) return;
     setDisbursingType(val);
     if (val === "หน่วยงานฝากเบิก") {
-      const dept = departments.find((d) => d.id === selectedDept);
-      setDepositUnitId(dept?.depositUnit || "");
+      if (isCentralDept && financeDept) {
+        setDepositUnitId(financeDept.id);
+      } else {
+        const dept = departments.find((d) => d.id === selectedDept);
+        setDepositUnitId(dept?.depositUnit || "");
+      }
     } else {
       setDepositUnitId("");
     }
@@ -313,6 +370,30 @@ export function CreateBillForm({
     }
   }, [state?.success, router]);
 
+  useEffect(() => {
+    if (state?.error) {
+      setTimeout(() => {
+        const firstErrorEl = document.querySelector("[data-has-error='true']");
+        if (firstErrorEl) {
+          firstErrorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    }
+  }, [state?.error]);
+
+  const handleFormSubmit = (formData: FormData) => {
+    if (selectedInvoiceFile) {
+      formData.set("attachmentInvoice", selectedInvoiceFile);
+    }
+    if (selectedReceiptFile) {
+      formData.set("attachmentReceipt", selectedReceiptFile);
+    }
+    if (selectedDirectPaymentFile) {
+      formData.set("attachmentDirectPayment", selectedDirectPaymentFile);
+    }
+    formAction(formData);
+  };
+
   return (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
@@ -321,77 +402,56 @@ export function CreateBillForm({
           กรอกข้อมูลรายละเอียดค่าใช้จ่ายสาธารณูปโภคประจำเดือน
         </CardDescription>
       </CardHeader>
-      <form action={formAction}>
+      <form noValidate action={handleFormSubmit}>
         <CardContent className="space-y-6">
           {state?.error && typeof state.error === "string" && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-xl border border-destructive/20 font-medium">
               {state.error}
             </div>
           )}
 
           {state?.error && typeof state.error === "object" && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20">
-              <p className="font-semibold mb-1">พบข้อผิดพลาด กรุณาตรวจสอบข้อมูล:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                {Object.entries(state.error).map(([field, msgs]) => (
-                  <li key={field}>
-                    {field}: {(msgs as string[]).join(", ")}
-                  </li>
-                ))}
-              </ul>
+            <div className="flex items-center gap-3 p-3.5 text-sm text-rose-700 bg-rose-50/90 rounded-2xl border border-rose-200/80 shadow-xs dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50 animate-in fade-in-0 duration-200">
+              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+              <div className="flex-1">
+                <p className="font-semibold text-rose-900 dark:text-rose-200">
+                  พบข้อมูลที่ต้องแก้ไข ({Object.keys(state.error).length} รายการ)
+                </p>
+                <p className="text-xs text-rose-700/90 dark:text-rose-400 mt-0.5">
+                  โปรดตรวจสอบและแก้ไขข้อมูลในช่องที่มีบอลลูนแจ้งเตือนสีแดงด้านล่าง
+                </p>
+              </div>
             </div>
           )}
 
           {state?.success && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 rounded-md border border-green-200 dark:bg-green-900/20 dark:text-green-400">
+            <div className="p-3 text-sm text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400">
               บันทึกข้อมูลสำเร็จ
             </div>
           )}
 
           {/* Group 1: ข้อมูลทั่วไป */}
-          <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
+          <div className="space-y-4 rounded-2xl border bg-card/50 p-4 shadow-xs">
             <div className="flex items-center gap-2 border-b pb-3">
               <Building2 className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-lg tracking-tight">ข้อมูลทั่วไป</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.departmentId}>
                 <Label htmlFor="departmentId">
                   หน่วยงาน <span className="text-destructive">*</span>
                 </Label>
-                <Select
-                  name="departmentId"
-                  value={selectedDept}
-                  onValueChange={handleDeptChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกหน่วยงาน...">
-                      {(value: any) => {
-                        if (!value) return null;
-                        const dept = departments.find((d) => d.id === value);
-                        if (dept) return dept.fullName;
-                        return value;
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mainDepartments.map((dept) => (
-                      <SelectItem
-                        key={dept.id}
-                        value={dept.id}
-                        label={dept.fullName}
-                      >
-                        {dept.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors?.departmentId && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.departmentId[0]}
-                  </p>
-                )}
+                <input type="hidden" name="departmentId" value={selectedDept} />
+                <Input
+                  id="departmentId"
+                  type="text"
+                  value={selectedDeptData?.fullName || "ไม่ระบุหน่วยงาน"}
+                  readOnly
+                  disabled
+                  className="bg-muted/70 cursor-not-allowed font-medium text-foreground disabled:opacity-100 shadow-2xs"
+                />
+                <ErrorSpeechBubble message={fieldErrors?.departmentId} />
               </div>
 
               <div className="grid gap-2">
@@ -430,7 +490,7 @@ export function CreateBillForm({
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.disbursingType}>
                 <Label htmlFor="disbursingType">ประเภทการเบิกจ่าย</Label>
                 <Select
                   name={
@@ -446,7 +506,9 @@ export function CreateBillForm({
                     className={
                       !selectedDeptData?.costCenterCode
                         ? "bg-muted cursor-not-allowed"
-                        : ""
+                        : fieldErrors?.disbursingType
+                          ? "border-rose-500 ring-2 ring-rose-500/20"
+                          : ""
                     }
                   >
                     <SelectValue placeholder="เลือกประเภท..." />
@@ -465,9 +527,10 @@ export function CreateBillForm({
                     value={disbursingType}
                   />
                 )}
+                <ErrorSpeechBubble message={fieldErrors?.disbursingType} />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.depositUnitId}>
                 <Label htmlFor="depositUnit">
                   ฝากเบิกกับหน่วยงาน{" "}
                   {disbursingType === "หน่วยงานฝากเบิก" && (
@@ -475,30 +538,46 @@ export function CreateBillForm({
                   )}
                 </Label>
                 <div className="w-full">
-                  <DepartmentCombobox
-                    departments={departments}
-                    name="depositUnit"
-                    value={depositUnitId}
-                    onValueChange={setDepositUnitId}
-                    disabled={disbursingType !== "หน่วยงานฝากเบิก"}
-                    placeholder={
-                      disbursingType === "หน่วยงานฝากเบิก"
-                        ? "ระบุหน่วยงานที่รับฝากเบิก"
-                        : "-"
-                    }
-                  />
-                  {fieldErrors?.depositUnitId && (
-                    <p className="text-xs text-destructive mt-1">
-                      {fieldErrors.depositUnitId[0]}
-                    </p>
+                  {isCentralDept && disbursingType === "หน่วยงานฝากเบิก" ? (
+                    <div className="space-y-1.5">
+                      <input
+                        type="hidden"
+                        name="depositUnit"
+                        value={financeDept?.id || depositUnitId}
+                      />
+                      <Input
+                        type="text"
+                        value={financeDept?.fullName || "กองบริหารการคลัง"}
+                        readOnly
+                        disabled
+                        className="bg-muted/70 cursor-not-allowed font-medium text-foreground disabled:opacity-100 shadow-2xs"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        * ระดับหน่วยงานส่วนกลาง บังคับฝากเบิกกับกองบริหารการคลังเท่านั้น
+                      </p>
+                    </div>
+                  ) : (
+                    <DepartmentCombobox
+                      departments={departments}
+                      name="depositUnit"
+                      value={depositUnitId}
+                      onValueChange={setDepositUnitId}
+                      disabled={disbursingType !== "หน่วยงานฝากเบิก"}
+                      placeholder={
+                        disbursingType === "หน่วยงานฝากเบิก"
+                          ? "ระบุหน่วยงานที่รับฝากเบิก"
+                          : "-"
+                      }
+                    />
                   )}
+                  <ErrorSpeechBubble message={fieldErrors?.depositUnitId} />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Group 2: ใบแจ้งหนี้ค่าสาธารณูปโภค */}
-          <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
+          <div className="space-y-4 rounded-2xl border bg-card/50 p-4 shadow-xs">
             <div className="flex items-center gap-2 border-b pb-3">
               <Receipt className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-lg tracking-tight">
@@ -507,7 +586,7 @@ export function CreateBillForm({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.utilityType}>
                 <Label htmlFor="utilityType">
                   ประเภทสาธารณูปโภค <span className="text-destructive">*</span>
                 </Label>
@@ -516,7 +595,7 @@ export function CreateBillForm({
                   value={selectedUtility}
                   onValueChange={handleUtilityChange}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={fieldErrors?.utilityType ? "border-rose-500 ring-2 ring-rose-500/20" : ""}>
                     <SelectValue placeholder="เลือกประเภทสาธารณูปโภค" />
                   </SelectTrigger>
                   <SelectContent>
@@ -540,14 +619,10 @@ export function CreateBillForm({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                {fieldErrors?.utilityType && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.utilityType[0]}
-                  </p>
-                )}
+                <ErrorSpeechBubble message={fieldErrors?.utilityType} />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.serviceNumber}>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="serviceNumber">
                     หมายเลขผู้ใช้ / รหัสเครื่องวัด{" "}
@@ -557,7 +632,7 @@ export function CreateBillForm({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-6 px-2 text-[11px] font-medium border-orange-500/30 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:border-orange-500/50 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/50 shadow-sm transition-all"
+                    className="h-6 px-2 text-[11px] font-medium border-orange-500/30 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:border-orange-500/50 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/50 shadow-xs transition-all"
                     disabled={!selectedDeptData}
                     onClick={() => setServicesSheetOpen(true)}
                   >
@@ -573,7 +648,9 @@ export function CreateBillForm({
                     className={
                       !selectedUtility || utilityServices.length === 0
                         ? "bg-muted cursor-not-allowed"
-                        : ""
+                        : fieldErrors?.serviceNumber
+                          ? "border-rose-500 ring-2 ring-rose-500/20"
+                          : ""
                     }
                   >
                     <SelectValue
@@ -637,11 +714,7 @@ export function CreateBillForm({
                   </div>
                 )}
 
-                {fieldErrors?.serviceNumber && (
-                  <p className="text-xs text-destructive whitespace-pre-line">
-                    {fieldErrors.serviceNumber[0]}
-                  </p>
-                )}
+                <ErrorSpeechBubble message={fieldErrors?.serviceNumber} />
                 <p className="text-xs text-muted-foreground mt-1">
                   สามารถเลือกได้หลายหมายเลข (ในกรณีที่ชำระบิลรวมกัน)
                 </p>
@@ -675,7 +748,7 @@ export function CreateBillForm({
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.billingMonth}>
                 <Label htmlFor="billingMonth">
                   รอบบิลประจำเดือน <span className="text-destructive">*</span>
                 </Label>
@@ -683,13 +756,11 @@ export function CreateBillForm({
                   id="billingMonth"
                   name="billingMonth"
                   required
+                  value={billingMonthStr}
                   onChange={(val) => setBillingMonthStr(val)}
+                  className={fieldErrors?.billingMonth ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                 />
-                {fieldErrors?.billingMonth && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.billingMonth[0]}
-                  </p>
-                )}
+                <ErrorSpeechBubble message={fieldErrors?.billingMonth} />
               </div>
 
               <div className="grid gap-2">
@@ -709,7 +780,7 @@ export function CreateBillForm({
           </div>
 
           {/* Group 3: การรับใบแจ้งหนี้ */}
-          <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
+          <div className="space-y-4 rounded-2xl border bg-card/50 p-4 shadow-xs">
             <div className="flex items-center gap-2 border-b pb-3">
               <CalendarClock className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-lg tracking-tight">
@@ -756,7 +827,7 @@ export function CreateBillForm({
 
               {invoiceStatus === "RECEIVED" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-dashed mt-2">
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.invoiceDate}>
                     <Label htmlFor="invoiceDate">
                       วันที่ใบแจ้งหนี้ <span className="text-destructive">*</span>
                     </Label>
@@ -764,15 +835,14 @@ export function CreateBillForm({
                       id="invoiceDate"
                       name="invoiceDate"
                       required={true}
+                      value={invoiceDate}
+                      onChange={(_, str) => setInvoiceDate(str)}
+                      className={fieldErrors?.invoiceDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.invoiceDate && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.invoiceDate[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.invoiceDate} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.receivedDate}>
                     <Label htmlFor="receivedDate">
                       วันที่ลงรับใบแจ้งหนี้ <span className="text-destructive">*</span>
                     </Label>
@@ -780,15 +850,14 @@ export function CreateBillForm({
                       id="receivedDate"
                       name="receivedDate"
                       required={true}
+                      value={receivedDate}
+                      onChange={(_, str) => setReceivedDate(str)}
+                      className={fieldErrors?.receivedDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.receivedDate && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.receivedDate[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.receivedDate} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.sentToDisbursingDate}>
                     <Label htmlFor="sentToDisbursingDate">
                       หน่วยฝากเบิกส่งเอกสาร
                     </Label>
@@ -796,16 +865,15 @@ export function CreateBillForm({
                       id="sentToDisbursingDate"
                       name="sentToDisbursingDate"
                       required={false}
+                      value={sentToDisbursingDate}
+                      onChange={(_, str) => setSentToDisbursingDate(str)}
                       disabled={disbursingType !== "หน่วยงานฝากเบิก"}
+                      className={fieldErrors?.sentToDisbursingDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.sentToDisbursingDate && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.sentToDisbursingDate[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.sentToDisbursingDate} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.disbursingReceivedDate}>
                     <Label htmlFor="disbursingReceivedDate">
                       วันที่หน่วยเบิกจ่ายลงรับใบแจ้งหนี้
                     </Label>
@@ -813,17 +881,16 @@ export function CreateBillForm({
                       id="disbursingReceivedDate"
                       name="disbursingReceivedDate"
                       required={false}
+                      value={disbursingReceivedDate}
+                      onChange={(_, str) => setDisbursingReceivedDate(str)}
                       disabled={disbursingType !== "หน่วยงานฝากเบิก"}
+                      className={fieldErrors?.disbursingReceivedDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.disbursingReceivedDate && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.disbursingReceivedDate[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.disbursingReceivedDate} />
                   </div>
 
                   {/* Breakdown by Service Number */}
-                  <div className="md:col-span-2 space-y-3 rounded-lg border bg-muted/20 p-4">
+                  <div className="md:col-span-2 space-y-3 rounded-xl border bg-muted/20 p-4">
                     <div className="flex items-center justify-between border-b pb-2">
                       <Label className="font-semibold text-sm flex items-center gap-2">
                         <span>ระบุจำนวนเงินตามหมายเลขผู้ใช้ / รหัสเครื่องวัด</span>
@@ -912,7 +979,7 @@ export function CreateBillForm({
                     )}
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.amountBaht}>
                     <Label htmlFor="amountBaht">
                       รวมเป็นจำนวนเงิน (บาท){" "}
                       <span className="text-destructive">*</span>
@@ -924,18 +991,14 @@ export function CreateBillForm({
                       name="amountBaht"
                       value={displayTotalAmount}
                       readOnly
-                      className="bg-muted cursor-not-allowed font-medium"
+                      className={cn("bg-muted cursor-not-allowed font-medium", fieldErrors?.amountBaht ? "border-rose-500 ring-2 ring-rose-500/20" : "")}
                       placeholder="0.00"
                       required
                     />
-                    {fieldErrors?.amountBaht && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.amountBaht[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.amountBaht} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.unitsUsed}>
                     <Label htmlFor="unitsUsed">
                       ปริมาณการใช้ (kWh / m³){" "}
                       {(selectedUtility === "ค่าไฟฟ้า" ||
@@ -948,7 +1011,8 @@ export function CreateBillForm({
                       step="0.01"
                       id="unitsUsed"
                       name="unitsUsed"
-                      defaultValue=""
+                      value={unitsUsed}
+                      onChange={(e) => setUnitsUsed(e.target.value)}
                       placeholder="0.00"
                       required={
                         selectedUtility === "ค่าไฟฟ้า" ||
@@ -966,48 +1030,70 @@ export function CreateBillForm({
                           selectedUtility === "ค่าประปา&น้ำบาดาล"
                         )
                           ? "bg-muted cursor-not-allowed"
-                          : ""
+                          : fieldErrors?.unitsUsed
+                            ? "border-rose-500 ring-2 ring-rose-500/20"
+                            : ""
                       }
                     />
-                    {fieldErrors?.unitsUsed && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.unitsUsed[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.unitsUsed} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.documentRef}>
                     <Label htmlFor="documentRef">
-                      เลขที่ใบแจ้งหนี้ สถานะการเบิกจ่าย
+                      เลขที่ใบแจ้งหนี้ (Invoice)
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       type="text"
                       id="documentRef"
                       name="documentRef"
-                      defaultValue=""
+                      value={documentRef}
+                      onChange={(e) => setDocumentRef(e.target.value)}
                       placeholder="เช่น 6811000709"
                       required
+                      className={fieldErrors?.documentRef ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
+                    <ErrorSpeechBubble message={fieldErrors?.documentRef} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.attachmentInvoice}>
                     <Label htmlFor="attachmentInvoice">
                       เอกสารใบแจ้งหนี้ <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      type="file"
-                      id="attachmentInvoice"
-                      name="attachmentInvoice"
-                      accept=".pdf,image/*"
-                      className="cursor-pointer"
-                      required
-                    />
-                    {fieldErrors?.attachmentInvoice && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.attachmentInvoice[0]}
-                      </p>
+                    {selectedInvoiceFile ? (
+                      <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
+                            {selectedInvoiceFile.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({(selectedInvoiceFile.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedInvoiceFile(null)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
+                        >
+                          <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        type="file"
+                        id="attachmentInvoice"
+                        name="attachmentInvoice"
+                        accept=".pdf,image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) setSelectedInvoiceFile(e.target.files[0]);
+                        }}
+                        className={cn("cursor-pointer", fieldErrors?.attachmentInvoice ? "border-rose-500 ring-2 ring-rose-500/20" : "")}
+                      />
                     )}
+                    <ErrorSpeechBubble message={fieldErrors?.attachmentInvoice} />
                   </div>
                 </div>
               )}
@@ -1015,7 +1101,7 @@ export function CreateBillForm({
           </div>
 
           {/* Group 4: การเบิกจ่ายค่าสาธารณูปโภค */}
-          <div className="space-y-4 rounded-xl border bg-card/50 p-4 shadow-sm">
+          <div className="space-y-4 rounded-2xl border bg-card/50 p-4 shadow-xs">
             <div className="flex items-center gap-2 border-b pb-3">
               <Banknote className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-lg tracking-tight">
@@ -1067,7 +1153,7 @@ export function CreateBillForm({
               {paymentStatus === "PAID" && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-dashed mt-2">
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.paymentDate}>
                       <Label htmlFor="paymentDate">
                         วันที่เอกสาร <span className="text-destructive">*</span>
                       </Label>
@@ -1075,15 +1161,14 @@ export function CreateBillForm({
                         id="paymentDate"
                         name="paymentDate"
                         required={true}
+                        value={paymentDate}
+                        onChange={(_, str) => setPaymentDate(str)}
+                        className={fieldErrors?.paymentDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                       />
-                      {fieldErrors?.paymentDate && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.paymentDate[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.paymentDate} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.costCenterCode}>
                       <Label htmlFor="costCenterCode">
                         รหัสศูนย์ต้นทุน <span className="text-destructive">*</span>
                       </Label>
@@ -1093,7 +1178,7 @@ export function CreateBillForm({
                         name="costCenterCode"
                         value={costCenterCode || ""}
                         readOnly
-                        className="bg-muted cursor-not-allowed"
+                        className={cn("bg-muted cursor-not-allowed", fieldErrors?.costCenterCode ? "border-rose-500 ring-2 ring-rose-500/20" : "")}
                         placeholder="ดึงจากหน่วยงานอัตโนมัติ"
                       />
                       {!costCenterCode && paymentStatus === "PAID" && (
@@ -1102,14 +1187,10 @@ export function CreateBillForm({
                           กรุณาตรวจสอบข้อมูลหน่วยงานหรือระบุหน่วยงานที่รับฝากเบิก
                         </p>
                       )}
-                      {fieldErrors?.costCenterCode && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.costCenterCode[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.costCenterCode} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.budgetCode}>
                       <Label htmlFor="budgetCode">
                         รหัสงบประมาณ <span className="text-destructive">*</span>
                       </Label>
@@ -1124,7 +1205,7 @@ export function CreateBillForm({
                             value={budgetCode}
                             onValueChange={(val) => val && setBudgetCode(val)}
                           >
-                            <SelectTrigger id="budgetCode" className="w-full">
+                            <SelectTrigger id="budgetCode" className={cn("w-full", fieldErrors?.budgetCode ? "border-rose-500 ring-2 ring-rose-500/20" : "")}>
                               <SelectValue placeholder="-- เลือกรหัสงบประมาณ --">
                                 {budgetCode
                                   ? (() => {
@@ -1160,16 +1241,13 @@ export function CreateBillForm({
                           onChange={(e) => setBudgetCode(e.target.value)}
                           placeholder="เช่น 2800100000000000"
                           required={true}
+                          className={fieldErrors?.budgetCode ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                         />
                       )}
-                      {fieldErrors?.budgetCode && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.budgetCode[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.budgetCode} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.paymentDocNumber}>
                       <Label htmlFor="paymentDocNumber">
                         เลขเอกสาร <span className="text-destructive">*</span>
                       </Label>
@@ -1177,18 +1255,16 @@ export function CreateBillForm({
                         type="text"
                         id="paymentDocNumber"
                         name="paymentDocNumber"
-                        defaultValue=""
+                        value={paymentDocNumber}
+                        onChange={(e) => setPaymentDocNumber(e.target.value)}
                         placeholder="เช่น 3100011102"
                         required={true}
+                        className={fieldErrors?.paymentDocNumber ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                       />
-                      {fieldErrors?.paymentDocNumber && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.paymentDocNumber[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.paymentDocNumber} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.docType}>
                       <Label htmlFor="docType">
                         ประเภทเอกสาร <span className="text-destructive">*</span>
                       </Label>
@@ -1196,18 +1272,16 @@ export function CreateBillForm({
                         type="text"
                         id="docType"
                         name="docType"
-                        defaultValue=""
+                        value={docType}
+                        onChange={(e) => setDocType(e.target.value)}
                         placeholder="เช่น KC"
                         required={true}
+                        className={fieldErrors?.docType ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                       />
-                      {fieldErrors?.docType && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.docType[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.docType} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.accountCode}>
                       <Label htmlFor="accountCode">
                         รหัสแยกประเภท<span className="text-destructive">*</span>
                       </Label>
@@ -1220,16 +1294,12 @@ export function CreateBillForm({
                         value={accountCode}
                         onChange={() => {}}
                         readOnly
-                        className="bg-muted cursor-not-allowed"
+                        className={cn("bg-muted cursor-not-allowed", fieldErrors?.accountCode ? "border-rose-500 ring-2 ring-rose-500/20" : "")}
                       />
-                      {fieldErrors?.accountCode && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.accountCode[0]}
-                        </p>
-                      )}
+                      <ErrorSpeechBubble message={fieldErrors?.accountCode} />
                     </div>
 
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.paidAmount}>
                       <div className="flex items-center justify-between flex-wrap gap-1">
                         <Label htmlFor="paidAmount">
                           จำนวนเงินที่เบิกจ่าย (บาท){" "}
@@ -1261,8 +1331,8 @@ export function CreateBillForm({
                         placeholder="0.00"
                         required={true}
                         className={
-                          isPaidOverLimit
-                            ? "border-destructive focus-visible:ring-destructive"
+                          isPaidOverLimit || fieldErrors?.paidAmount
+                            ? "border-rose-500 ring-2 ring-rose-500/20"
                             : ""
                         }
                       />
@@ -1291,7 +1361,7 @@ export function CreateBillForm({
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="grid gap-2 bg-background p-3 rounded-lg border border-dashed">
+                      <div className="grid gap-2 bg-background p-3 rounded-xl border border-dashed relative" data-has-error={!!fieldErrors?.attachmentReceipt}>
                         <Label
                           htmlFor="attachmentReceipt"
                           className="font-medium"
@@ -1299,17 +1369,46 @@ export function CreateBillForm({
                           ใบเสร็จรับเงิน{" "}
                           <span className="text-destructive">*</span>
                         </Label>
-                        <Input
-                          type="file"
-                          id="attachmentReceipt"
-                          name="attachmentReceipt"
-                          accept="image/*,.pdf"
-                          className="cursor-pointer file:cursor-pointer text-xs"
-                          required={true}
-                        />
+                        {selectedReceiptFile ? (
+                          <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
+                                {selectedReceiptFile.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                ({(selectedReceiptFile.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedReceiptFile(null)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
+                            >
+                              <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
+                            </Button>
+                          </div>
+                        ) : (
+                          <Input
+                            type="file"
+                            id="attachmentReceipt"
+                            name="attachmentReceipt"
+                            accept="image/*,.pdf"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setSelectedReceiptFile(e.target.files[0]);
+                            }}
+                            className={cn(
+                              "cursor-pointer file:cursor-pointer text-xs",
+                              fieldErrors?.attachmentReceipt ? "border-rose-500 ring-2 ring-rose-500/20" : ""
+                            )}
+                          />
+                        )}
+                        <ErrorSpeechBubble message={fieldErrors?.attachmentReceipt} />
                       </div>
 
-                      <div className="grid gap-2 bg-background p-3 rounded-lg border border-dashed">
+                      <div className="grid gap-2 bg-background p-3 rounded-xl border border-dashed relative" data-has-error={!!fieldErrors?.attachmentDirectPayment}>
                         <Label
                           htmlFor="attachmentDirectPayment"
                           className="font-medium"
@@ -1317,14 +1416,43 @@ export function CreateBillForm({
                           รายงานจ่ายตรง / รายงาน KTB{" "}
                           <span className="text-destructive">*</span>
                         </Label>
-                        <Input
-                          type="file"
-                          id="attachmentDirectPayment"
-                          name="attachmentDirectPayment"
-                          accept="image/*,.pdf"
-                          className="cursor-pointer file:cursor-pointer text-xs"
-                          required={true}
-                        />
+                        {selectedDirectPaymentFile ? (
+                          <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
+                                {selectedDirectPaymentFile.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                ({(selectedDirectPaymentFile.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedDirectPaymentFile(null)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
+                            >
+                              <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
+                            </Button>
+                          </div>
+                        ) : (
+                          <Input
+                            type="file"
+                            id="attachmentDirectPayment"
+                            name="attachmentDirectPayment"
+                            accept="image/*,.pdf"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setSelectedDirectPaymentFile(e.target.files[0]);
+                            }}
+                            className={cn(
+                              "cursor-pointer file:cursor-pointer text-xs",
+                              fieldErrors?.attachmentDirectPayment ? "border-rose-500 ring-2 ring-rose-500/20" : ""
+                            )}
+                          />
+                        )}
+                        <ErrorSpeechBubble message={fieldErrors?.attachmentDirectPayment} />
                       </div>
                     </div>
                   </div>

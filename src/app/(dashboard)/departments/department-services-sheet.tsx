@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
+import { ErrorSpeechBubble } from "@/components/ui/error-speech-bubble";
 
 type Service = {
   id: string;
@@ -150,7 +151,7 @@ export function DepartmentServicesSheet({
 
           <div className="border-t pt-6">
             <h4 className="font-medium mb-4">เพิ่มหมายเลขผู้ใช้ใหม่</h4>
-            <form action={formAction} className="space-y-4">
+            <form noValidate action={formAction} className="space-y-4">
               <input
                 type="hidden"
                 name="departmentId"
@@ -161,7 +162,7 @@ export function DepartmentServicesSheet({
                 <div className="text-sm text-destructive">{state.error}</div>
               )}
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative">
                 <Label>
                   ประเภทสาธารณูปโภค <span className="text-destructive">*</span>
                 </Label>
@@ -171,7 +172,7 @@ export function DepartmentServicesSheet({
                     if (v) setUtilityType(v);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={fieldErrors?.utilityType ? "border-rose-500 ring-2 ring-rose-500/20" : ""}>
                     <SelectValue placeholder="เลือกประเภท..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -186,11 +187,7 @@ export function DepartmentServicesSheet({
                     <SelectItem value="ค่าบริการไปรษณีย์">ค่าบริการไปรษณีย์</SelectItem>
                   </SelectContent>
                 </Select>
-                {fieldErrors?.utilityType && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.utilityType[0]}
-                  </p>
-                )}
+                <ErrorSpeechBubble message={fieldErrors?.utilityType} />
               </div>
 
               {utilityType === "ค่าโทรศัพท์" && (
@@ -214,29 +211,29 @@ export function DepartmentServicesSheet({
                 </div>
               )}
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative">
                 <Label>
                   ผู้ให้บริการ <span className="text-destructive">*</span>
                 </Label>
-                <Input name="provider" placeholder="เช่น กฟภ., TOT" />
-                {fieldErrors?.provider && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.provider[0]}
-                  </p>
-                )}
+                <Input
+                  name="provider"
+                  placeholder="เช่น กฟภ., TOT"
+                  className={fieldErrors?.provider ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                />
+                <ErrorSpeechBubble message={fieldErrors?.provider} />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-2 relative">
                 <Label>
                   หมายเลขผู้ใช้ / รหัสเครื่องวัด{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                <Input name="serviceNumber" placeholder="หมายเลขเครื่องวัด" />
-                {fieldErrors?.serviceNumber && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.serviceNumber[0]}
-                  </p>
-                )}
+                <Input
+                  name="serviceNumber"
+                  placeholder="หมายเลขเครื่องวัด"
+                  className={fieldErrors?.serviceNumber ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                />
+                <ErrorSpeechBubble message={fieldErrors?.serviceNumber} />
               </div>
 
               {!["ค่าไปรษณีย์", "ค่าบริการไปรษณีย์"].includes(utilityType) &&
@@ -259,29 +256,29 @@ export function DepartmentServicesSheet({
 
               {utilityType === "ค่าโทรศัพท์" && phoneType === "mobile" && (
                 <>
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative">
                     <Label>
                       ชื่อ-สกุลเจ้าของเบอร์{" "}
                       <span className="text-destructive">*</span>
                     </Label>
-                    <Input name="phoneOwnerName" placeholder="ระบุชื่อ-สกุล" />
-                    {fieldErrors?.phoneOwnerName && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.phoneOwnerName[0]}
-                      </p>
-                    )}
+                    <Input
+                      name="phoneOwnerName"
+                      placeholder="ระบุชื่อ-สกุล"
+                      className={fieldErrors?.phoneOwnerName ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                    />
+                    <ErrorSpeechBubble message={fieldErrors?.phoneOwnerName} />
                   </div>
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 relative">
                     <Label>
                       ตำแหน่งเจ้าของเบอร์{" "}
                       <span className="text-destructive">*</span>
                     </Label>
-                    <Input name="phoneOwnerPosition" placeholder="ระบุตำแหน่ง" />
-                    {fieldErrors?.phoneOwnerPosition && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.phoneOwnerPosition[0]}
-                      </p>
-                    )}
+                    <Input
+                      name="phoneOwnerPosition"
+                      placeholder="ระบุตำแหน่ง"
+                      className={fieldErrors?.phoneOwnerPosition ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                    />
+                    <ErrorSpeechBubble message={fieldErrors?.phoneOwnerPosition} />
                   </div>
                 </>
               )}

@@ -39,7 +39,14 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { Search } from "lucide-react";
+import {
+  Search,
+  Calendar,
+  AlertCircle,
+  FileQuestion,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 
 type TrackingData = {
   id: string;
@@ -77,33 +84,28 @@ const THAI_MONTHS = [
 const STATUS_CONFIG = {
   UNRECORDED: {
     label: "ยังไม่ได้บันทึก",
-    color: "#ef4444",
-    bgClass:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200",
+    color: "#f43f5e",
+    variant: "destructive" as const,
   },
   NOT_RECEIVED: {
     label: "ยังไม่ได้รับใบแจ้งหนี้",
     color: "#f97316",
-    bgClass:
-      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200",
+    variant: "warning" as const,
   },
   PENDING_PAYMENT: {
     label: "ยังไม่ได้เบิกจ่าย",
     color: "#eab308",
-    bgClass:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200",
+    variant: "secondary" as const,
   },
   PAID: {
     label: "เบิกจ่ายแล้ว",
-    color: "#22c55e",
-    bgClass:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200",
+    color: "#10b981",
+    variant: "success" as const,
   },
   UNKNOWN: {
     label: "ไม่ทราบสถานะ",
     color: "#6b7280",
-    bgClass:
-      "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200",
+    variant: "outline" as const,
   },
 };
 
@@ -206,113 +208,156 @@ export function TrackingDashboard({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="text-sm font-medium whitespace-nowrap">
-              เลือกเดือน/ปี:
-            </div>
-            <Select value={month.toString()} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="เลือกเดือน" />
-              </SelectTrigger>
-              <SelectContent>
-                {THAI_MONTHS.map((m, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={(year + 543).toString()}
-              onValueChange={handleYearChange}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="เลือกปี" />
-              </SelectTrigger>
-              <SelectContent>
-                {yearsBE.map((y) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Month/Year Filter Card */}
+      <div className="p-4 rounded-2xl bg-card/85 dark:bg-card/70 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Calendar className="size-4 text-primary" />
+          <span>เลือกรอบบิลที่ต้องการติดตาม:</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Select value={month.toString()} onValueChange={handleMonthChange}>
+            <SelectTrigger className="w-[160px] h-9.5 rounded-xl text-xs">
+              <SelectValue placeholder="เลือกเดือน">
+                {THAI_MONTHS[month - 1]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {THAI_MONTHS.map((m, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={(year + 543).toString()}
+            onValueChange={handleYearChange}
+          >
+            <SelectTrigger className="w-[110px] h-9.5 rounded-xl text-xs">
+              <SelectValue placeholder="เลือกปี">
+                {year + 543}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {yearsBE.map((y) => (
+                <SelectItem key={y} value={y.toString()}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
+      {/* KPI Metric Widget Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              ยังไม่ได้บันทึก
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {stats.unrecorded}
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                ยังไม่ได้บันทึก
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
+                <AlertCircle className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              รายการที่คาดหวังแต่ไม่พบในระบบ
-            </p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
+                {stats.unrecorded}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                รายการที่คาดหวังแต่ไม่พบในระบบ
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              ยังไม่ได้รับใบแจ้งหนี้
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-              {stats.notReceived}
+
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                ยังไม่ได้รับใบแจ้งหนี้
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                <FileQuestion className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              บันทึกแล้วแต่รอใบเสร็จ/แจ้งหนี้
-            </p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+                {stats.notReceived}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                บันทึกแล้วแต่รอใบเสร็จ/แจ้งหนี้
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              ยังไม่ได้เบิกจ่าย
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-              {stats.pending}
+
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                ยังไม่ได้เบิกจ่าย
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                <Clock className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ได้รับใบแจ้งหนี้ รอทำเรื่องจ่าย
-            </p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
+                {stats.pending}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                ได้รับใบแจ้งหนี้ รอทำเรื่องจ่าย
+              </p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              เบิกจ่ายแล้ว
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-              {stats.paid}
+
+        <Card className="apple-card-hover border-black/[0.06] dark:border-white/[0.08]">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide">
+                เบิกจ่ายแล้ว
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                <CheckCircle2 className="size-4.5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">ชำระเงินเรียบร้อย</p>
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                {stats.paid}
+                <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                  รายการ
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                ชำระเงินเรียบร้อย
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>สัดส่วนสถานะบิล</CardTitle>
+        <Card className="border-black/[0.06] dark:border-white/[0.08]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold tracking-tight">สัดส่วนสถานะบิล</CardTitle>
             <CardDescription>ภาพรวมของบิลทั้งหมดในเดือนนี้</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px]">
             {stats.total === 0 ? (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 ไม่มีข้อมูล
               </div>
             ) : (
@@ -323,9 +368,10 @@ export function TrackingDashboard({
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
+                    outerRadius={95}
+                    paddingAngle={3}
                     dataKey="value"
+                    stroke="transparent"
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -341,14 +387,14 @@ export function TrackingDashboard({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>สถานะแยกตามประเภท</CardTitle>
+        <Card className="border-black/[0.06] dark:border-white/[0.08]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold tracking-tight">สถานะแยกตามประเภท</CardTitle>
             <CardDescription>การแจกแจงตามประเภทสาธารณูปโภค</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px]">
             {stats.total === 0 ? (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 ไม่มีข้อมูล
               </div>
             ) : (
@@ -359,29 +405,33 @@ export function TrackingDashboard({
                     vertical={false}
                     opacity={0.2}
                   />
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
+                  <XAxis dataKey="name" className="text-[11px]" />
+                  <YAxis allowDecimals={false} className="text-[11px]" />
                   <Tooltip />
                   <Legend />
                   <Bar
                     dataKey="ยังไม่ได้บันทึก"
                     stackId="a"
                     fill={STATUS_CONFIG.UNRECORDED.color}
+                    radius={[0, 0, 0, 0]}
                   />
                   <Bar
                     dataKey="ยังไม่ได้รับใบแจ้งหนี้"
                     stackId="a"
                     fill={STATUS_CONFIG.NOT_RECEIVED.color}
+                    radius={[0, 0, 0, 0]}
                   />
                   <Bar
                     dataKey="ยังไม่ได้เบิกจ่าย"
                     stackId="a"
                     fill={STATUS_CONFIG.PENDING_PAYMENT.color}
+                    radius={[0, 0, 0, 0]}
                   />
                   <Bar
                     dataKey="เบิกจ่ายแล้ว"
                     stackId="a"
                     fill={STATUS_CONFIG.PAID.color}
+                    radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -390,39 +440,49 @@ export function TrackingDashboard({
         </Card>
       </div>
 
-      <Card>
+      {/* Details Table Card */}
+      <Card className="border-black/[0.06] dark:border-white/[0.08]">
         <CardHeader>
-          <CardTitle>รายละเอียดรายการ ({filteredData.length} รายการ)</CardTitle>
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="ค้นหาชื่อหน่วยงาน, ประเภท, หรือเลขหมาย..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-base font-semibold tracking-tight">
+                รายละเอียดรายการ ({filteredData.length} รายการ)
+              </CardTitle>
+              <CardDescription>
+                แสดงรายการบิลและสถานะความคืบหน้ารายหน่วยงาน
+              </CardDescription>
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => v && setStatusFilter(v)}
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="ทุกสถานะ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ทุกสถานะ">ทุกสถานะ</SelectItem>
-                <SelectItem value="UNRECORDED">ยังไม่ได้บันทึก</SelectItem>
-                <SelectItem value="NOT_RECEIVED">ยังไม่ได้รับใบแจ้งหนี้</SelectItem>
-                <SelectItem value="PENDING_PAYMENT">ยังไม่ได้เบิกจ่าย</SelectItem>
-                <SelectItem value="PAID">เบิกจ่ายแล้ว</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative w-full sm:w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="ค้นหาชื่อหน่วยงาน, หมายเลข..."
+                  className="pl-9 h-9.5 rounded-xl bg-background/60 text-xs"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => v && setStatusFilter(v)}
+              >
+                <SelectTrigger className="w-full sm:w-[170px] h-9.5 rounded-xl text-xs">
+                  <SelectValue placeholder="ทุกสถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ทุกสถานะ">ทุกสถานะ</SelectItem>
+                  <SelectItem value="UNRECORDED">ยังไม่ได้บันทึก</SelectItem>
+                  <SelectItem value="NOT_RECEIVED">ยังไม่ได้รับใบแจ้งหนี้</SelectItem>
+                  <SelectItem value="PENDING_PAYMENT">ยังไม่ได้เบิกจ่าย</SelectItem>
+                  <SelectItem value="PAID">เบิกจ่ายแล้ว</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-xl">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -431,36 +491,36 @@ export function TrackingDashboard({
                   <TableHead>ผู้ให้บริการ</TableHead>
                   <TableHead>หมายเลขผู้ใช้</TableHead>
                   <TableHead className="text-right">ยอดเงิน</TableHead>
-                  <TableHead>สถานะ</TableHead>
+                  <TableHead className="text-center">สถานะ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      ไม่พบข้อมูล
+                    <TableCell colSpan={6} className="h-28 text-center text-muted-foreground text-sm">
+                      ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredData.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={item.id} className="group">
+                      <TableCell className="font-medium text-foreground text-xs sm:text-sm">
                         {item.departmentName}
                       </TableCell>
-                      <TableCell>{item.utilityType}</TableCell>
-                      <TableCell>{item.provider}</TableCell>
-                      <TableCell>{item.serviceNumber}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-xs text-muted-foreground">{item.utilityType}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{item.provider}</TableCell>
+                      <TableCell className="text-xs font-mono text-foreground/90">{item.serviceNumber}</TableCell>
+                      <TableCell className="text-right font-semibold text-xs text-foreground">
                         {item.amount !== "0" && item.amount !== "0.00"
                           ? parseFloat(item.amount).toLocaleString("th-TH", {
                               minimumFractionDigits: 2,
                             })
                           : "-"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge
-                          variant="outline"
-                          className={STATUS_CONFIG[item.status].bgClass}
+                          variant={STATUS_CONFIG[item.status].variant}
+                          className="text-[10px] h-5 font-normal"
                         >
                           {STATUS_CONFIG[item.status].label}
                         </Badge>
@@ -476,3 +536,4 @@ export function TrackingDashboard({
     </div>
   );
 }
+

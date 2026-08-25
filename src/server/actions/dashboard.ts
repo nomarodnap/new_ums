@@ -119,7 +119,7 @@ export async function getDashboardStats(
 
   // 4. Anomalous Bills (Unreviewed / Manual flag or any audit issue)
   const anomalyCondition = and(
-    sql`(${audits.isManualAnomaly} = true OR ${audits.isLateReceive} = true OR ${audits.isLatePayment} = true OR ${audits.isWrongMonth} = true OR ${audits.isPhoneOverLimit} = true OR ${audits.isPhoneUsageOverLimit} = true OR ${audits.isWrongBudget} = true OR ${audits.isDuplicate} = true)`,
+    sql`(${audits.isManualAnomaly} = true OR ${audits.isLateReceive} = true OR ${audits.isLatePayment} = true OR ${audits.isOverdueMoreThan2Months} = true OR ${audits.isDisbursementOver2Months} = true OR ${audits.isWrongMonth} = true OR ${audits.isPhoneOverLimit} = true OR ${audits.isPhoneUsageOverLimit} = true OR ${audits.isWrongBudget} = true OR ${audits.isDuplicate} = true)`,
     eq(utilityBills.isReviewed, false),
     roleCondition,
   );
@@ -144,6 +144,8 @@ export async function getDashboardStats(
       manualAnomalyReason: audits.manualAnomalyReason,
       isLateReceive: audits.isLateReceive,
       isLatePayment: audits.isLatePayment,
+      isOverdueMoreThan2Months: audits.isOverdueMoreThan2Months,
+      isDisbursementOver2Months: audits.isDisbursementOver2Months,
     })
     .from(utilityBills)
     .leftJoin(departments, eq(utilityBills.departmentId, departments.id))

@@ -23,6 +23,8 @@ import {
   addDepartmentService,
   updateDepartmentService,
 } from "@/server/actions/department-services";
+import { ErrorSpeechBubble } from "@/components/ui/error-speech-bubble";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -140,20 +142,19 @@ export function ServiceFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form action={formAction} className="space-y-6 mt-6">
+        <form noValidate action={formAction} className="space-y-6 mt-6">
           <div className="space-y-4">
             {userRole === "admin" ? (
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="departmentId">
-                  หน่วยงาน <span className="text-red-500">*</span>
+                  หน่วยงาน <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   name="departmentId"
-                  required
                   value={departmentId}
                   onValueChange={(v) => v && setDepartmentId(v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={fieldErrors?.departmentId ? "border-rose-500 ring-2 ring-rose-500/20" : ""}>
                     <SelectValue placeholder="เลือกหน่วยงาน">
                       {departmentId
                         ? departments.find((d) => d.id === departmentId)
@@ -171,11 +172,7 @@ export function ServiceFormSheet({
                     ))}
                   </SelectContent>
                 </Select>
-                {fieldErrors?.departmentId && (
-                  <p className="text-sm text-red-500">
-                    {fieldErrors.departmentId[0]}
-                  </p>
-                )}
+                <ErrorSpeechBubble message={fieldErrors?.departmentId} />
               </div>
             ) : (
               <input
@@ -185,17 +182,16 @@ export function ServiceFormSheet({
               />
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="utilityType">
-                ประเภทสาธารณูปโภค <span className="text-red-500">*</span>
+                ประเภทสาธารณูปโภค <span className="text-destructive">*</span>
               </Label>
               <Select
                 name="utilityType"
                 value={utilityType}
                 onValueChange={(v) => v && setUtilityType(v)}
-                required
               >
-                <SelectTrigger>
+                <SelectTrigger className={fieldErrors?.utilityType ? "border-rose-500 ring-2 ring-rose-500/20" : ""}>
                   <SelectValue placeholder="เลือกประเภท">
                     {utilityType || "เลือกประเภท"}
                   </SelectValue>
@@ -208,11 +204,7 @@ export function ServiceFormSheet({
                   <SelectItem value="ค่าไปรษณีย์">ค่าไปรษณีย์</SelectItem>
                 </SelectContent>
               </Select>
-              {fieldErrors?.utilityType && (
-                <p className="text-sm text-red-500">
-                  {fieldErrors.utilityType[0]}
-                </p>
-              )}
+              <ErrorSpeechBubble message={fieldErrors?.utilityType} />
             </div>
 
             {utilityType === "ค่าโทรศัพท์" && (
@@ -236,38 +228,30 @@ export function ServiceFormSheet({
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="provider">
-                ผู้ให้บริการ <span className="text-red-500">*</span>
+                ผู้ให้บริการ <span className="text-destructive">*</span>
               </Label>
               <Input
                 name="provider"
                 defaultValue={serviceToEdit?.provider || ""}
                 placeholder="เช่น กฟภ., กปภ., TOT, AIS"
-                required
+                className={fieldErrors?.provider ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
               />
-              {fieldErrors?.provider && (
-                <p className="text-sm text-red-500">
-                  {fieldErrors.provider[0]}
-                </p>
-              )}
+              <ErrorSpeechBubble message={fieldErrors?.provider} />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="serviceNumber">
-                รหัสเครื่องวัด / หมายเลขผู้ใช้ <span className="text-red-500">*</span>
+                รหัสเครื่องวัด / หมายเลขผู้ใช้ <span className="text-destructive">*</span>
               </Label>
               <Input
                 name="serviceNumber"
                 defaultValue={serviceToEdit?.serviceNumber || ""}
                 placeholder="ระบุหมายเลข"
-                required
+                className={fieldErrors?.serviceNumber ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
               />
-              {fieldErrors?.serviceNumber && (
-                <p className="text-sm text-red-500">
-                  {fieldErrors.serviceNumber[0]}
-                </p>
-              )}
+              <ErrorSpeechBubble message={fieldErrors?.serviceNumber} />
             </div>
 
             {!["ค่าไปรษณีย์", "ค่าบริการไปรษณีย์"].includes(utilityType) &&
@@ -297,42 +281,36 @@ export function ServiceFormSheet({
             {utilityType === "ค่าโทรศัพท์" && phoneType === "mobile" && (
               <div className="space-y-4 pt-4 border-t">
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <Label htmlFor="phoneOwnerName">
-                      ชื่อ-สกุล <span className="text-red-500">*</span>
+                      ชื่อ-สกุล <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       name="phoneOwnerName"
                       defaultValue={serviceToEdit?.phoneOwnerName || ""}
                       placeholder="ระบุชื่อ-สกุลผู้ถือครอง"
+                      className={fieldErrors?.phoneOwnerName ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.phoneOwnerName && (
-                      <p className="text-sm text-red-500">
-                        {fieldErrors.phoneOwnerName[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.phoneOwnerName} />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <Label htmlFor="phoneOwnerPosition">
-                      ตำแหน่ง <span className="text-red-500">*</span>
+                      ตำแหน่ง <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       name="phoneOwnerPosition"
                       defaultValue={serviceToEdit?.phoneOwnerPosition || ""}
                       placeholder="ระบุตำแหน่ง"
+                      className={fieldErrors?.phoneOwnerPosition ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
                     />
-                    {fieldErrors?.phoneOwnerPosition && (
-                      <p className="text-sm text-red-500">
-                        {fieldErrors.phoneOwnerPosition[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.phoneOwnerPosition} />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <Label htmlFor="phoneReimbursementLimit">
                       เพดานสิทธิเบิก (บาท/เดือน){" "}
-                      <span className="text-red-500">*</span>
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Select
                       name="phoneReimbursementLimit"
@@ -340,7 +318,7 @@ export function ServiceFormSheet({
                       onValueChange={(v) => v && setPhoneReimbursementLimit(v)}
                       disabled={userRole === "user"}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={fieldErrors?.phoneReimbursementLimit ? "border-rose-500 ring-2 ring-rose-500/20" : ""}>
                         <SelectValue placeholder="เลือกเพดานการเบิก">
                           {phoneReimbursementLimit
                             ? `${Number(phoneReimbursementLimit).toLocaleString()} บาท`
@@ -353,11 +331,7 @@ export function ServiceFormSheet({
                         <SelectItem value="4000">4,000 บาท</SelectItem>
                       </SelectContent>
                     </Select>
-                    {fieldErrors?.phoneReimbursementLimit && (
-                      <p className="text-sm text-red-500">
-                        {fieldErrors.phoneReimbursementLimit[0]}
-                      </p>
-                    )}
+                    <ErrorSpeechBubble message={fieldErrors?.phoneReimbursementLimit} />
                   </div>
                 </>
               </div>

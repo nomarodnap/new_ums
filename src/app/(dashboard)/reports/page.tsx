@@ -5,69 +5,141 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileText, Lock } from "lucide-react";
+import {
+  FileText,
+  Lock,
+  ArrowRight,
+  BarChart3,
+  AlertTriangle,
+  PieChart,
+  ShieldCheck,
+  Building,
+  FileCheck2,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { requireRole } from "@/server/auth";
+import { Badge } from "@/components/ui/badge";
 
 const reportList = [
   {
     id: "utility",
-    title: "1. รายงานค่าสาธารณูปโภค",
+    number: "01",
+    title: "รายงานค่าสาธารณูปโภค",
     description:
       "แสดงงบประมาณจัดสรร ผลเบิกจ่าย งบพึงประสงค์ เปรียบเทียบรายกอง/รายหน่วยงาน (รายเดือนและรายปี)",
     href: "/reports/utility",
-    allowedRoles: ["staff", "supervisor", "admin"],
+    icon: BarChart3,
+    colorClass: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+    badgeLabel: "ทุกหน่วยงาน",
+    allowedRoles: [
+      "admin",
+      "auditor",
+      "strategy_finance",
+      "central_staff",
+      "regional_staff",
+      "user",
+    ],
   },
   {
     id: "pending",
-    title: "2. รายงานค่าสาธารณูปโภคค้างชำระ",
+    number: "02",
+    title: "รายงานค่าสาธารณูปโภคค้างชำระ",
     description: "สรุปรายการบิลค้างชำระ ยอดประมาณการที่อยู่ระหว่างขอจัดสรรงบ",
     href: "/reports/pending",
-    allowedRoles: ["staff", "supervisor", "admin"],
+    icon: AlertTriangle,
+    colorClass: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+    badgeLabel: "ทุกหน่วยงาน",
+    allowedRoles: [
+      "admin",
+      "auditor",
+      "strategy_finance",
+      "central_staff",
+      "regional_staff",
+      "user",
+    ],
   },
   {
     id: "budget",
-    title: "3. รายงานการบริหารงบประมาณ",
+    number: "03",
+    title: "รายงานการบริหารงบประมาณ",
     description:
       "เปรียบเทียบงบประมาณคงเหลือ และวิเคราะห์รายชื่อหน่วยงานที่งบประมาณมีแนวโน้มไม่เพียงพอ",
     href: "/reports/budget",
-    allowedRoles: ["staff", "supervisor", "admin"],
+    icon: PieChart,
+    colorClass: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
+    badgeLabel: "ทุกหน่วยงาน",
+    allowedRoles: [
+      "admin",
+      "auditor",
+      "strategy_finance",
+      "central_staff",
+      "regional_staff",
+      "user",
+    ],
   },
   {
     id: "audit-results",
-    title: "4. รายงานผลการตรวจสอบค่าสาธารณูปโภค",
+    number: "04",
+    title: "รายงานผลการตรวจสอบค่าสาธารณูปโภค",
     description:
       "รายงานประเด็นความคลาดเคลื่อน เทียบกับปีก่อนหน้า และติดตามการแก้ไขตามข้อเสนอแนะ",
     href: "/reports/audit-results",
-    allowedRoles: ["staff", "supervisor", "admin"],
+    icon: ShieldCheck,
+    colorClass: "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400",
+    badgeLabel: "ทุกหน่วยงาน",
+    allowedRoles: [
+      "admin",
+      "auditor",
+      "strategy_finance",
+      "central_staff",
+      "regional_staff",
+      "user",
+    ],
   },
   {
     id: "audit-summary",
-    title: "5. รายงานสรุปการเบิกจ่าย (สำหรับ กตน.)",
+    number: "05",
+    title: "รายงานสรุปการเบิกจ่าย (สำหรับ กตน.)",
     description: "รายงานสำหรับกลุ่มตรวจสอบภายในเท่านั้น แสดงรายละเอียดบิลและหมายเลขผู้ใช้",
     href: "/reports/audit-summary",
-    allowedRoles: ["supervisor", "admin"], // กตน.
+    icon: FileCheck2,
+    colorClass: "bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400",
+    badgeLabel: "เฉพาะ กตน.",
+    allowedRoles: ["admin", "auditor"],
   },
   {
     id: "finance-control",
-    title: "6. ทะเบียนคุมการเบิกจ่าย (สำหรับ กค.)",
+    number: "06",
+    title: "ทะเบียนคุมการเบิกจ่าย (สำหรับ กค.)",
     description: "ทะเบียนคุมการเบิกจ่ายของกองบริหารการคลัง แสดงวันรับเรื่องและเลขที่ใบสำคัญ",
     href: "/reports/finance-control",
-    allowedRoles: ["admin"], // กค.
+    icon: Building,
+    colorClass: "bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400",
+    badgeLabel: "เฉพาะ กค.",
+    allowedRoles: ["admin", "central_staff"],
   },
   {
     id: "additional-budget",
-    title: "7. แบบฟอร์มขอรับงบจัดสรรเพิ่มเติม (สำหรับ กยผ.)",
+    number: "07",
+    title: "แบบฟอร์มขอรับงบจัดสรรเพิ่มเติม (สำหรับ กยผ.)",
     description: "แบบฟอร์มคำขอสำหรับหน่วยงานที่งบประมาณไม่เพียงพอ",
     href: "/reports/additional-budget",
-    allowedRoles: ["admin"], // กยผ.
+    icon: FileText,
+    colorClass: "bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400",
+    badgeLabel: "เฉพาะ กยผ.",
+    allowedRoles: ["admin", "strategy_finance"],
   },
   {
     id: "audit-worksheet",
-    title: "8. กระดาษทำการตรวจสอบค่าสาธารณูปโภค (สำหรับ กตน.)",
+    number: "08",
+    title: "กระดาษทำการตรวจสอบค่าสาธารณูปโภค (สำหรับ กตน.)",
     description: "เอกสารสรุปจำนวนวันตั้งแต่รับบิลจนถึงเบิกจ่าย เพื่อหากรณีเบิกจ่ายล่าช้า",
     href: "/reports/audit-worksheet",
-    allowedRoles: ["supervisor", "admin"], // กตน.
+    icon: ShieldCheck,
+    colorClass: "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400",
+    badgeLabel: "เฉพาะ กตน.",
+    allowedRoles: ["admin", "auditor"],
   },
 ];
 
@@ -78,76 +150,95 @@ export default async function ReportsCenterPage() {
     "strategy_finance",
     "central_staff",
     "regional_staff",
+    "user",
   ]);
   const userRole = session.user.role;
 
   return (
-    <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">
-          ศูนย์รวมรายงาน (Report Center)
-        </h2>
+    <div className="space-y-8">
+      {/* Top Header */}
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            ศูนย์รวมรายงาน (Report Center)
+          </h1>
+          <Badge variant="secondary" className="font-normal text-xs">
+            8 รูปแบบ
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          ระบบออกรายงานการบริหารจัดการค่าสาธารณูปโภค
+          โดยสิทธิ์การเข้าถึงจะขึ้นอยู่กับบทบาทและสังกัดของคุณ
+        </p>
       </div>
 
-      <p className="text-muted-foreground mb-6">
-        ระบบออกรายงานการบริหารจัดการค่าสาธารณูปโภค 8 รูปแบบ
-        โดยสิทธิ์การเข้าถึงรายงานจะขึ้นอยู่กับบทบาทและสังกัดของคุณ
-      </p>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Report Cards Bento Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {reportList.map((report) => {
           const isAllowed = report.allowedRoles.includes(userRole || "");
+          const Icon = report.icon;
 
           return (
-            <Card
+            <div
               key={report.id}
-              className={`transition-all ${isAllowed ? "hover:border-primary/50 hover:shadow-md" : "opacity-70 bg-muted/30"}`}
+              className={`group relative flex flex-col justify-between rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-card/90 dark:bg-card/70 p-5 backdrop-blur-xl shadow-xs transition-all duration-200 ${
+                isAllowed
+                  ? "hover:-translate-y-1 hover:border-primary/40 hover:shadow-md cursor-pointer"
+                  : "opacity-60 bg-muted/20 cursor-not-allowed"
+              }`}
             >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-start justify-between mb-4">
                   <div
-                    className={`p-2 rounded-lg ${isAllowed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+                    className={`flex size-11 items-center justify-center rounded-2xl ${
+                      isAllowed ? report.colorClass : "bg-muted text-muted-foreground"
+                    } ${isAllowed ? "group-hover:scale-105" : ""} transition-transform`}
                   >
                     {isAllowed ? (
-                      <FileText className="w-5 h-5" />
+                      <Icon className="size-5.5" />
                     ) : (
-                      <Lock className="w-5 h-5" />
+                      <Lock className="size-5" />
                     )}
                   </div>
-                  {!isAllowed && (
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                      No Access
-                    </span>
-                  )}
+                  <Badge
+                    variant={isAllowed ? "secondary" : "outline"}
+                    className="text-[10px] h-5 font-normal"
+                  >
+                    {report.badgeLabel}
+                  </Badge>
                 </div>
-                <CardTitle className="text-lg mt-4 leading-tight">
-                  {report.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="line-clamp-3">
-                  {report.description}
-                </CardDescription>
 
-                <div className="mt-6">
-                  {isAllowed ? (
-                    <Link
-                      href={report.href}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      เรียกดูรายงาน &rarr;
-                    </Link>
-                  ) : (
-                    <span className="text-sm text-muted-foreground cursor-not-allowed">
-                      เฉพาะเจ้าหน้าที่ที่เกี่ยวข้อง
-                    </span>
-                  )}
+                <div className="text-[11px] font-semibold text-muted-foreground/80 tracking-wider uppercase mb-1">
+                  Report #{report.number}
                 </div>
-              </CardContent>
-            </Card>
+                <h3 className="font-semibold text-base text-foreground leading-snug group-hover:text-primary transition-colors">
+                  {report.title}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-2 line-clamp-3 leading-relaxed">
+                  {report.description}
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-black/[0.04] dark:border-white/[0.06]">
+                {isAllowed ? (
+                  <Link
+                    href={report.href}
+                    className="flex items-center justify-between text-xs font-semibold text-primary group-hover:underline"
+                  >
+                    <span>เปิดดูรายงาน</span>
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    ไม่มีสิทธิ์เข้าถึงรายงานนี้
+                  </span>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
     </div>
   );
 }
+

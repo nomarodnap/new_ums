@@ -31,28 +31,60 @@ const months = [
   "ธันวาคม",
 ];
 
+function parseMonthValue(v: string | undefined): Date | undefined {
+  if (!v) return undefined;
+  const parts = v.split("-");
+  if (parts.length >= 2) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const parsed = new Date(y, m, 1);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 export function MonthPickerBE({
   id,
   name,
   defaultValue,
+  value,
   required,
   onChange,
+  className,
 }: {
   id?: string;
   name?: string;
   defaultValue?: string; // Expects "YYYY-MM"
+  value?: string;
   required?: boolean;
   onChange?: (value: string) => void;
+  className?: string;
 }) {
-  const [date, setDate] = React.useState<Date | undefined>(
-    defaultValue ? new Date(`${defaultValue}-01T00:00:00`) : undefined,
+  const isControlled = value !== undefined;
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(() =>
+    parseMonthValue(value !== undefined ? value : defaultValue),
   );
+
+  React.useEffect(() => {
+    if (isControlled) {
+      setInternalDate(parseMonthValue(value));
+    }
+  }, [value, isControlled]);
+
+  const date = isControlled ? parseMonthValue(value) : internalDate;
 
   // For the view in the popover
   const [viewYear, setViewYear] = React.useState<number>(
     date ? date.getFullYear() : new Date().getFullYear(),
   );
   const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (date) {
+      setViewYear(date.getFullYear());
+    }
+  }, [date]);
 
   const formatBE = (d: Date) => {
     const year = d.getFullYear() + 543;
@@ -62,14 +94,23 @@ export function MonthPickerBE({
 
   const handleMonthSelect = (monthIndex: number) => {
     const newDate = new Date(viewYear, monthIndex, 1);
-    setDate(newDate);
+    if (!isControlled) {
+      setDateInternal(newDate);
+    }
     setIsOpen(false);
     if (onChange) {
-      // Create YYYY-MM format manually to avoid timezone issues with date-fns format
       const mm = String(monthIndex + 1).padStart(2, "0");
       onChange(`${viewYear}-${mm}`);
     }
   };
+
+  const setDateInternal = (d: Date) => {
+    setInternalDate(d);
+  };
+
+  const formattedMonthString = date
+    ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+    : "";
 
   return (
     <>
@@ -79,36 +120,37 @@ export function MonthPickerBE({
             <Button
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal h-9.5 rounded-xl",
                 !date && "text-muted-foreground",
+                className,
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
               {date ? formatBE(date) : <span>เลือกเดือน</span>}
             </Button>
           }
         />
-        <PopoverContent className="w-64 p-3" align="start">
+        <PopoverContent className="w-64 p-3 rounded-2xl" align="start">
           <div className="flex items-center justify-between mb-4">
             <Button
               variant="outline"
               type="button"
-              className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+              className="size-7 rounded-lg bg-transparent p-0 opacity-70 hover:opacity-100"
               onClick={() => setViewYear(viewYear - 1)}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
-            <div className="text-sm font-medium">พ.ศ. {viewYear + 543}</div>
+            <div className="text-sm font-semibold">พ.ศ. {viewYear + 543}</div>
             <Button
               variant="outline"
               type="button"
-              className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+              className="size-7 rounded-lg bg-transparent p-0 opacity-70 hover:opacity-100"
               onClick={() => setViewYear(viewYear + 1)}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {months.map((month, idx) => {
               const isSelected =
                 date?.getMonth() === idx && date?.getFullYear() === viewYear;
@@ -117,7 +159,7 @@ export function MonthPickerBE({
                   key={month}
                   type="button"
                   variant={isSelected ? "default" : "ghost"}
-                  className="h-9 text-xs"
+                  className="h-8 text-xs rounded-lg"
                   onClick={() => handleMonthSelect(idx)}
                 >
                   {month}
@@ -127,16 +169,14 @@ export function MonthPickerBE({
           </div>
         </PopoverContent>
       </Popover>
-      {/* Visually hidden text input for form submission (native YYYY-MM) so HTML5 required validation works */}
+      {/* Hidden input for standard form submission (native YYYY-MM) */}
       <input
-        type="text"
-        className="absolute w-0 h-0 opacity-0 pointer-events-none"
-        tabIndex={-1}
+        type="hidden"
         id={id}
         name={name}
-        value={date ? format(date, "yyyy-MM") : ""}
-        readOnly
+        value={formattedMonthString}
       />
     </>
   );
 }
+

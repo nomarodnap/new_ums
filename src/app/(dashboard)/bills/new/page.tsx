@@ -27,12 +27,10 @@ export default async function NewBillPage() {
       .orderBy(desc(budgetCodes.fiscalYear), desc(budgetCodes.createdAt)),
   ]);
 
-  const currentUser = await db
-    .select({ departmentId: user.departmentId })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-  const defaultDepartmentId = currentUser[0]?.departmentId || undefined;
+  const defaultDepartmentId =
+    (session.user as any).departmentId ||
+    allDepartments[0]?.id ||
+    "";
 
   return (
     <div className="flex-1 space-y-4">

@@ -79,6 +79,7 @@ export default async function BillsPage() {
 
         isLatePayment: audits.isLatePayment,
         isOverdueMoreThan2Months: audits.isOverdueMoreThan2Months,
+        isDisbursementOver2Months: audits.isDisbursementOver2Months,
         isWrongMonth: audits.isWrongMonth,
         isPhoneOverLimit: audits.isPhoneOverLimit,
         isPhoneUsageOverLimit: audits.isPhoneUsageOverLimit,

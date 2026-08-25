@@ -132,24 +132,24 @@ export function ServicesTable({
   return (
     <div className="space-y-4">
       {/* Search and Dropdown Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
+      <div className="p-4 rounded-2xl bg-card/85 dark:bg-card/70 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="ค้นหาหน่วยงาน, รหัสเครื่องวัด, ชื่อเจ้าของ..."
-              className="pl-8"
+              className="pl-9 h-9.5 rounded-xl bg-background/60 text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="w-[180px]">
+          <div className="w-[190px]">
             <Select
               value={utilityFilter}
               onValueChange={(val) => val && setUtilityFilter(val)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9.5 rounded-xl text-xs">
                 <SelectValue placeholder="ประเภทสาธารณูปโภค">
                   {utilityFilter === "all"
                     ? "ทุกประเภทสาธารณูปโภค"
@@ -177,21 +177,21 @@ export function ServicesTable({
               setServiceToEdit(null);
               setIsFormOpen(true);
             }}
-            className="shrink-0"
+            className="shrink-0 gap-1.5 shadow-xs"
           >
-            <Plus className="mr-2 h-4 w-4" /> เพิ่มรายการใหม่
+            <Plus className="size-4" /> เพิ่มรายการใหม่
           </Button>
         </div>
       </div>
 
-      <div className="border rounded-lg bg-card shadow-xs overflow-x-auto">
+      <div className="border border-black/[0.06] dark:border-white/[0.08] rounded-2xl bg-card/90 dark:bg-card/70 backdrop-blur-xl shadow-xs overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>หน่วยงาน</TableHead>
-              <TableHead>ประเภท/ผู้ให้บริการ</TableHead>
-              <TableHead>รหัสเครื่องวัด/เบอร์โทร</TableHead>
-              <TableHead>สถานที่/ผู้ใช้งาน</TableHead>
+              <TableHead>ประเภท / ผู้ให้บริการ</TableHead>
+              <TableHead>รหัสเครื่องวัด / เบอร์โทร</TableHead>
+              <TableHead>สถานที่ / ผู้ใช้งาน</TableHead>
               <TableHead className="text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -200,20 +200,20 @@ export function ServicesTable({
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="text-center py-8 text-muted-foreground"
+                  className="text-center py-10 text-muted-foreground text-sm"
                 >
-                  ไม่พบข้อมูล
+                  ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                 </TableCell>
               </TableRow>
             ) : (
               filteredServices.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={service.id} className="group">
+                  <TableCell className="font-medium text-foreground text-xs sm:text-sm">
                     {service.departmentName || "ไม่ทราบหน่วยงาน"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/90">
                         {getUtilityIcon(service.utilityType)}
                         <span>{service.utilityType}</span>
                       </div>
@@ -223,56 +223,61 @@ export function ServicesTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
+                    <span className="font-mono text-xs font-semibold text-foreground/90 bg-muted/60 px-2 py-0.5 rounded-md border border-black/[0.04] dark:border-white/[0.06]">
                       {service.serviceNumber}
                     </span>
                   </TableCell>
                   <TableCell>
-                    {service.utilityType === "ค่าโทรศัพท์" ? (
-                      <div className="flex flex-col text-sm">
-                        <span>{service.phoneOwnerName}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {service.phoneOwnerPosition}
+                    <div className="flex flex-col gap-0.5 text-xs">
+                      {service.locationType && (
+                        <span className="text-muted-foreground">
+                          {service.locationType}
                         </span>
-                        {service.phoneReimbursementLimit && (
-                          <Badge
-                            variant="outline"
-                            className="w-fit mt-1 text-[10px]"
-                          >
-                            สิทธิเบิก: ฿{service.phoneReimbursementLimit}
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-sm">
-                        {service.locationType || "-"}
-                      </span>
-                    )}
+                      )}
+                      {service.phoneOwnerName && (
+                        <span className="font-medium text-foreground">
+                          {service.phoneOwnerName}
+                          {service.phoneOwnerPosition && (
+                            <span className="text-muted-foreground font-normal">
+                              {" "}
+                              ({service.phoneOwnerPosition})
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {service.phoneReimbursementLimit && (
+                        <span className="text-[11px] text-primary">
+                          วงเงินเบิก: ฿
+                          {service.phoneReimbursementLimit.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                         onClick={() => {
                           setServiceToEdit(service);
                           setIsFormOpen(true);
                         }}
+                        className="size-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="size-3.5 text-muted-foreground hover:text-foreground" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => handleDelete(service.id)}
                         disabled={isDeleting === service.id}
+                        onClick={() => handleDelete(service.id)}
+                        className="size-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-3.5" />
                       </Button>
                     </div>
                   </TableCell>
+
                 </TableRow>
               ))
             )}

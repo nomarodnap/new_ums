@@ -3,23 +3,33 @@ import Link from "next/link";
 import { getMyNotifications } from "@/server/actions/notifications";
 import { Button } from "@/components/ui/button";
 
-export async function NotificationBell() {
-  let unreadCount = 0;
+export async function NotificationBell({
+  initialCount,
+}: {
+  initialCount?: number;
+}) {
+  let unreadCount = initialCount ?? 0;
 
-  try {
-    const notifications = await getMyNotifications();
-    unreadCount = notifications.filter((n) => !n.isRead).length;
-  } catch (error) {
-    // Graceful fallback if auth fails or not available
-    console.error("Failed to fetch notifications for bell");
+  if (initialCount === undefined) {
+    try {
+      const notifications = await getMyNotifications();
+      unreadCount = notifications.filter((n) => !n.isRead).length;
+    } catch (error) {
+      console.error("Failed to fetch notifications for bell");
+    }
   }
 
   return (
     <Link href="/notifications">
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5 text-muted-foreground" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative size-9 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all text-muted-foreground hover:text-foreground"
+        title="การแจ้งเตือนของหน่วยงาน"
+      >
+        <Bell className="size-4.5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+          <span className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white shadow-xs animate-pulse">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -27,3 +37,4 @@ export async function NotificationBell() {
     </Link>
   );
 }
+

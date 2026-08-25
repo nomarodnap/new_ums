@@ -14,11 +14,12 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="relative overflow-hidden transition-all duration-300 hover:bg-primary/10"
+      className="relative size-9 rounded-full overflow-hidden transition-all duration-300 hover:bg-black/5 dark:hover:bg-white/5"
     >
-      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
-      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
-      <span className="sr-only">Toggle theme</span>
+      <Sun className="size-4.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
+      <Moon className="absolute size-4.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
+      <span className="sr-only">สลับโหมดสี</span>
     </Button>
   );
 }
+

@@ -11,7 +11,7 @@ export function ResolveAuditForm({ auditId }: { auditId: string }) {
   const [state, formAction, isPending] = useActionState(resolveAudit, null);
 
   return (
-    <form action={formAction} className="space-y-4 mt-6">
+    <form noValidate action={formAction} className="space-y-4 mt-6">
       <input type="hidden" name="auditId" value={auditId} />
 
       {state?.error && (

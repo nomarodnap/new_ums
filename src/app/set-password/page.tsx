@@ -73,7 +73,7 @@ function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form noValidate onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="text-sm font-medium text-destructive">{error}</div>
       )}

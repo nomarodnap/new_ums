@@ -56,15 +56,24 @@ export async function getMyNotifications() {
   ]);
   const user = session.user as any;
 
-  let conditions = [isNull(notifications.departmentId)];
-
-  if (user.departmentId) {
-    conditions.push(eq(notifications.departmentId, user.departmentId));
-  }
-
+  // STRICTLY filter for the user's assigned department (even if admin), or system-wide (null)
   const myNotifs = await db
-    .select()
+    .select({
+      id: notifications.id,
+      departmentId: notifications.departmentId,
+      departmentName: departments.fullName,
+      targetRole: notifications.targetRole,
+      title: notifications.title,
+      message: notifications.message,
+      type: notifications.type,
+      severity: notifications.severity,
+      isRead: notifications.isRead,
+      link: notifications.link,
+      createdAt: notifications.createdAt,
+      updatedAt: notifications.updatedAt,
+    })
     .from(notifications)
+    .leftJoin(departments, eq(notifications.departmentId, departments.id))
     .where(
       user.departmentId
         ? or(
@@ -74,9 +83,80 @@ export async function getMyNotifications() {
         : isNull(notifications.departmentId),
     )
     .orderBy(desc(notifications.createdAt))
-    .limit(50);
+    .limit(100);
 
   return myNotifs;
+}
+
+export async function getAllSystemNotifications() {
+  await requireRole(["admin", "auditor"]);
+
+  const allNotifs = await db
+    .select({
+      id: notifications.id,
+      departmentId: notifications.departmentId,
+      departmentName: departments.fullName,
+      targetRole: notifications.targetRole,
+      title: notifications.title,
+      message: notifications.message,
+      type: notifications.type,
+      severity: notifications.severity,
+      isRead: notifications.isRead,
+      link: notifications.link,
+      createdAt: notifications.createdAt,
+      updatedAt: notifications.updatedAt,
+    })
+    .from(notifications)
+    .leftJoin(departments, eq(notifications.departmentId, departments.id))
+    .orderBy(desc(notifications.createdAt))
+    .limit(200);
+
+  return allNotifs;
+}
+
+export async function getNotificationCounts() {
+  try {
+    const session = await requireRole([
+      "admin",
+      "auditor",
+      "central_staff",
+      "regional_staff",
+      "strategy_finance",
+      "user",
+    ]);
+    const user = session.user as any;
+
+    const myDeptRes = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.isRead, false),
+          user.departmentId
+            ? or(
+                isNull(notifications.departmentId),
+                eq(notifications.departmentId, user.departmentId),
+              )
+            : isNull(notifications.departmentId),
+        ),
+      );
+
+    let allSystemCount = 0;
+    if (user.role === "admin" || user.role === "auditor") {
+      const allRes = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(eq(notifications.isRead, false));
+      allSystemCount = Number(allRes[0]?.count || 0);
+    }
+
+    return {
+      myDeptCount: Number(myDeptRes[0]?.count || 0),
+      allSystemCount,
+    };
+  } catch (error) {
+    return { myDeptCount: 0, allSystemCount: 0 };
+  }
 }
 
 export async function markAsRead(id: string) {
@@ -98,7 +178,7 @@ export async function markAsRead(id: string) {
   return { success: true };
 }
 
-export async function markAllAsRead() {
+export async function markAllAsRead(scope: "my_dept" | "all" = "my_dept") {
   const session = await requireRole([
     "admin",
     "auditor",
@@ -109,20 +189,27 @@ export async function markAllAsRead() {
   ]);
   const user = session.user as any;
 
-  await db
-    .update(notifications)
-    .set({ isRead: true })
-    .where(
-      and(
-        eq(notifications.isRead, false),
-        user.departmentId
-          ? or(
-              isNull(notifications.departmentId),
-              eq(notifications.departmentId, user.departmentId),
-            )
-          : isNull(notifications.departmentId),
-      ),
-    );
+  if (scope === "all" && (user.role === "admin" || user.role === "auditor")) {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.isRead, false));
+  } else {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(notifications.isRead, false),
+          user.departmentId
+            ? or(
+                isNull(notifications.departmentId),
+                eq(notifications.departmentId, user.departmentId),
+              )
+            : isNull(notifications.departmentId),
+        ),
+      );
+  }
 
   revalidatePath("/", "layout");
   return { success: true };

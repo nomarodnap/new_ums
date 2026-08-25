@@ -134,28 +134,6 @@ const createBillSchema = z
     depositUnitId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.paymentStatus === "PAID") {
-      if (!data.paymentDate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "กรุณาระบุวันที่เอกสาร",
-          path: ["paymentDate"],
-        });
-      }
-      if (
-        !data.costCenterCode ||
-        data.costCenterCode.trim() === "" ||
-        data.costCenterCode === "-"
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            "ไม่พบรหัสศูนย์ต้นทุนของหน่วยงานที่เบิกจ่าย (กรุณาตรวจสอบข้อมูลหน่วยงานหรือระบุหน่วยงานฝากเบิก)",
-          path: ["costCenterCode"],
-        });
-      }
-    }
-
     if (data.disbursingType === "หน่วยงานฝากเบิก" && !data.depositUnitId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -179,11 +157,85 @@ const createBillSchema = z
           path: ["receivedDate"],
         });
       }
-      if (data.amountBaht === undefined || data.amountBaht < 0) {
+      if (!data.documentRef || data.documentRef.trim() === "") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "ยอดเงินต้องมากกว่าหรือเท่ากับ 0",
+          message: "กรุณาระบุเลขที่ใบแจ้งหนี้ (Invoice)",
+          path: ["documentRef"],
+        });
+      }
+      if (data.amountBaht === undefined || isNaN(data.amountBaht) || data.amountBaht < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุยอดรวมจำนวนเงิน (บาท)",
           path: ["amountBaht"],
+        });
+      }
+      if (
+        (data.utilityType === "ค่าไฟฟ้า" || data.utilityType === "ค่าประปา&น้ำบาดาล") &&
+        (data.unitsUsed === undefined || isNaN(data.unitsUsed))
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุปริมาณการใช้ (kWh / m³)",
+          path: ["unitsUsed"],
+        });
+      }
+    }
+
+    if (data.paymentStatus === "PAID") {
+      if (!data.paymentDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุวันที่เอกสาร",
+          path: ["paymentDate"],
+        });
+      }
+      if (
+        !data.costCenterCode ||
+        data.costCenterCode.trim() === "" ||
+        data.costCenterCode === "-"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "ไม่พบรหัสศูนย์ต้นทุนของหน่วยงานที่เบิกจ่าย (กรุณาตรวจสอบข้อมูลหน่วยงานหรือระบุหน่วยงานฝากเบิก)",
+          path: ["costCenterCode"],
+        });
+      }
+      if (!data.budgetCode || data.budgetCode.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุหรือเลือกรหัสงบประมาณ",
+          path: ["budgetCode"],
+        });
+      }
+      if (!data.paymentDocNumber || data.paymentDocNumber.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุเลขเอกสาร",
+          path: ["paymentDocNumber"],
+        });
+      }
+      if (!data.docType || data.docType.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุประเภทเอกสาร (เช่น KC)",
+          path: ["docType"],
+        });
+      }
+      if (!data.accountCode || data.accountCode.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุรหัสแยกประเภท",
+          path: ["accountCode"],
+        });
+      }
+      if (data.paidAmount === undefined || isNaN(data.paidAmount) || data.paidAmount <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "กรุณาระบุจำนวนเงินที่เบิกจ่าย",
+          path: ["paidAmount"],
         });
       }
     }
@@ -251,12 +303,61 @@ export async function createBill(prevState: any, formData: FormData) {
       };
     }
 
+    if (parsed.data.disbursingType === "หน่วยงานฝากเบิก") {
+      const currentDept = await db.query.departments.findFirst({
+        where: (departments, { eq }) =>
+          eq(departments.id, parsed.data.departmentId),
+      });
+      if (currentDept?.type === "central") {
+        const financeDept = await db.query.departments.findFirst({
+          where: (departments, { or, like }) =>
+            or(
+              like(departments.fullName, "%กองบริหารการคลัง%"),
+              like(departments.fullName, "%การคลัง%"),
+              like(departments.shortName, "%กบค%"),
+            ),
+        });
+        if (financeDept) {
+          parsed.data.depositUnitId = financeDept.id;
+        }
+      }
+    }
+
     const invoiceFile = formData.get("attachmentInvoice") as File | null;
     const receiptFile = formData.get("attachmentReceipt") as File | null;
     const directPaymentFile = formData.get(
       "attachmentDirectPayment",
     ) as File | null;
     const ktbReportFile = formData.get("attachmentKtbReport") as File | null;
+
+    const fileErrors: Record<string, string[]> = {};
+    if (
+      parsed.data.invoiceStatus === "RECEIVED" &&
+      (!invoiceFile || invoiceFile.size === 0)
+    ) {
+      fileErrors.attachmentInvoice = ["กรุณาแนบไฟล์เอกสารใบแจ้งหนี้"];
+    }
+
+    if (parsed.data.paymentStatus === "PAID") {
+      if (!receiptFile || receiptFile.size === 0) {
+        fileErrors.attachmentReceipt = ["กรุณาแนบไฟล์ใบเสร็จรับเงิน"];
+      }
+      if (
+        (!directPaymentFile || directPaymentFile.size === 0) &&
+        (!ktbReportFile || ktbReportFile.size === 0)
+      ) {
+        fileErrors.attachmentDirectPayment = [
+          "กรุณาแนบไฟล์รายงานจ่ายตรง / รายงาน KTB",
+        ];
+      }
+    }
+
+    if (Object.keys(fileErrors).length > 0) {
+      return {
+        success: false,
+        error: fileErrors,
+      };
+    }
 
     const [invoiceUrl, receiptUrl, directPaymentUrl, ktbReportUrl] =
       await Promise.all([
@@ -537,12 +638,67 @@ export async function updateBill(prevState: any, formData: FormData) {
       }
     }
 
+    if (parsed.data.disbursingType === "หน่วยงานฝากเบิก") {
+      const currentDept = await db.query.departments.findFirst({
+        where: (departments, { eq }) =>
+          eq(departments.id, parsed.data.departmentId),
+      });
+      if (currentDept?.type === "central") {
+        const financeDept = await db.query.departments.findFirst({
+          where: (departments, { or, like }) =>
+            or(
+              like(departments.fullName, "%กองบริหารการคลัง%"),
+              like(departments.fullName, "%การคลัง%"),
+              like(departments.shortName, "%กบค%"),
+            ),
+        });
+        if (financeDept) {
+          parsed.data.depositUnitId = financeDept.id;
+        }
+      }
+    }
+
     const invoiceFile = formData.get("attachmentInvoice") as File | null;
     const receiptFile = formData.get("attachmentReceipt") as File | null;
     const directPaymentFile = formData.get(
       "attachmentDirectPayment",
     ) as File | null;
     const ktbReportFile = formData.get("attachmentKtbReport") as File | null;
+
+    const fileErrors: Record<string, string[]> = {};
+    if (
+      parsed.data.invoiceStatus === "RECEIVED" &&
+      !existingBill.attachmentInvoice &&
+      (!invoiceFile || invoiceFile.size === 0)
+    ) {
+      fileErrors.attachmentInvoice = ["กรุณาแนบไฟล์เอกสารใบแจ้งหนี้"];
+    }
+
+    if (parsed.data.paymentStatus === "PAID") {
+      if (
+        !existingBill.attachmentReceipt &&
+        (!receiptFile || receiptFile.size === 0)
+      ) {
+        fileErrors.attachmentReceipt = ["กรุณาแนบไฟล์ใบเสร็จรับเงิน"];
+      }
+      if (
+        !existingBill.attachmentDirectPayment &&
+        !existingBill.attachmentKtbReport &&
+        (!directPaymentFile || directPaymentFile.size === 0) &&
+        (!ktbReportFile || ktbReportFile.size === 0)
+      ) {
+        fileErrors.attachmentDirectPayment = [
+          "กรุณาแนบไฟล์รายงานจ่ายตรง / รายงาน KTB",
+        ];
+      }
+    }
+
+    if (Object.keys(fileErrors).length > 0) {
+      return {
+        success: false,
+        error: fileErrors,
+      };
+    }
 
     const [invoiceUrl, receiptUrl, directPaymentUrl, ktbReportUrl] =
       await Promise.all([

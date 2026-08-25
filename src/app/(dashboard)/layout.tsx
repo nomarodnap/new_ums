@@ -12,7 +12,10 @@ import { db } from "@/server/db";
 import { departments } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { getNotificationCounts } from "@/server/actions/notifications";
 import Image from "next/image";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,
@@ -26,49 +29,65 @@ export default async function DashboardLayout({
   }
 
   let departmentName = "ไม่ระบุหน่วยงาน";
-  if (session.user.departmentId) {
-    const dept = await db.query.departments.findFirst({
-      where: eq(departments.id, session.user.departmentId),
-    });
-    if (dept) {
-      departmentName = dept.fullName;
-    }
+  const [dept, notifCounts] = await Promise.all([
+    session.user.departmentId
+      ? db.query.departments.findFirst({
+          where: eq(departments.id, session.user.departmentId),
+        })
+      : null,
+    getNotificationCounts(),
+  ]);
+
+  if (dept) {
+    departmentName = dept.fullName;
   }
 
   const user = {
     name: session.user.name,
     department: departmentName,
     role: session.user.role ?? undefined,
+    myDeptUnreadCount: notifCounts.myDeptCount,
+    allSystemUnreadCount: notifCounts.allSystemCount,
   };
 
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 backdrop-blur-md px-4 sticky top-0 z-10">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex items-center gap-2.5 mr-4">
-            <Image
-              src="/logo.png"
-              alt="ตราสัญลักษณ์กรมประมง"
-              width={32}
-              height={32}
-              className="size-8 object-contain"
-              priority
-            />
-            <div className="font-semibold text-lg text-primary bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-teal-500 dark:from-cyan-400 dark:to-teal-200">
-              ระบบรายงานค่าสาธารณูปโภค กรมประมง
+      <SidebarInset className="bg-background">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] bg-background/80 dark:bg-background/70 backdrop-blur-2xl px-5 sm:px-8 sticky top-0 z-30 transition-all">
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground size-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" />
+            <div className="flex items-center gap-3">
+              <div className="flex size-8.5 items-center justify-center rounded-xl bg-white dark:bg-slate-900 p-1 shadow-xs border border-black/[0.06] dark:border-white/[0.08]">
+                <Image
+                  src="/logo.png"
+                  alt="ตราสัญลักษณ์กรมประมง"
+                  width={28}
+                  height={28}
+                  className="size-7 object-contain"
+                  priority
+                />
+              </div>
+              <div>
+                <div className="font-semibold text-sm sm:text-base text-foreground tracking-tight flex items-center gap-2">
+                  <span>ระบบรายงานค่าสาธารณูปโภค</span>
+                  <span className="hidden md:inline-flex text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                    กรมประมง
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <ThemeToggle />
-            <NotificationBell />
+            <NotificationBell initialCount={notifCounts.myDeptCount} />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-4 md:gap-8 md:p-8 bg-slate-50/50 dark:bg-gradient-to-b dark:from-slate-950 dark:to-slate-900 min-h-screen">
+        <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">
           {children}
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+

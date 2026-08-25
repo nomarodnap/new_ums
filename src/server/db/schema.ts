@@ -194,6 +194,9 @@ export const audits = pgTable("audits", {
   isOverdueMoreThan2Months: boolean("is_overdue_more_than_2_months").default(
     false,
   ),
+  isDisbursementOver2Months: boolean("is_disbursement_over_2_months").default(
+    false,
+  ),
   isWrongMonth: boolean("is_wrong_month").default(false),
   isPhoneOverLimit: boolean("is_phone_over_limit").default(false),
   isPhoneUsageOverLimit: boolean("is_phone_usage_over_limit").default(false),
