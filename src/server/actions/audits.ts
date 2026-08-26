@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import {
   utilityBills,
   audits,
+  budgetCodes,
   departmentServices,
   billActivityLogs,
 } from "@/server/db/schema";
@@ -16,7 +17,11 @@ import {
   addMonths,
 } from "date-fns";
 
-export async function runAuditChecks(billId: string, currentUserId: string) {
+export async function runAuditChecks(
+  billId: string,
+  currentUserId: string,
+  checkOthers: boolean = true,
+) {
   // Fetch the bill
   const [bill] = await db
     .select()
@@ -102,20 +107,57 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
     }
   }
 
-  // 5. นำใบแจ้งหนี้ของเดือนอื่น ที่ไม่ใช่เดือน ส.ค. – ก.ย. ของปีงบประมาณที่ผ่านมาเบิก
-  // Assuming current fiscal year starts in October.
-  const now = new Date();
-  const currentFiscalYear =
-    now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear();
-  const billFiscalYear =
-    bill.billingMonth >= 10 ? bill.billingYear + 1 : bill.billingYear;
+  // 5. นำใบแจ้งหนี้ของเดือนอื่น ที่ไม่ใช่เดือน ส.ค. – ก.ย. ของปีงบประมาณที่ผ่านมาเบิก (เบิกจ่ายผิดเดือน)
+  // 1) คำนวณปีงบประมาณของรอบบิล (Bill Fiscal Year พ.ศ.)
+  const billYearBE =
+    bill.billingYear < 2400 ? bill.billingYear + 543 : bill.billingYear;
+  const billFiscalYearBE =
+    bill.billingMonth >= 10 ? billYearBE + 1 : billYearBE;
 
-  if (billFiscalYear < currentFiscalYear) {
-    // It's from a previous fiscal year
-    // Check if it's NOT Aug (8) or Sep (9)
+  // 2) หาปีงบประมาณจากรหัสงบประมาณ (Budget Code Fiscal Year พ.ศ.)
+  let budgetFiscalYearBE: number | null = null;
+  if (bill.budgetCode && bill.budgetCode.trim() !== "") {
+    const cleanBudgetCode = bill.budgetCode.trim();
+    // 2.1 หาจากฐานข้อมูล budget_codes
+    const [bc] = await db
+      .select()
+      .from(budgetCodes)
+      .where(eq(budgetCodes.code, cleanBudgetCode));
+    if (bc && bc.fiscalYear) {
+      budgetFiscalYearBE =
+        bc.fiscalYear < 2400 ? bc.fiscalYear + 543 : bc.fiscalYear;
+    } else {
+      // 2.2 สกัดจากตัวเลขใน budgetCode เช่น 2568, 2569 หรือขึ้นต้นด้วย 68, 69
+      const match4 = cleanBudgetCode.match(/(25[5-7][0-9])/);
+      if (match4) {
+        budgetFiscalYearBE = parseInt(match4[1], 10);
+      } else {
+        const match2 = cleanBudgetCode.match(/^(6[0-9]|7[0-9])/);
+        if (match2) {
+          budgetFiscalYearBE = 2500 + parseInt(match2[1], 10);
+        }
+      }
+    }
+  }
+
+  // 2.3 ถ้าไม่มีรหัสงบประมาณ ให้ใช้วันที่เบิกจ่าย (paymentDate) หรือวันปัจจุบันเป็นเกณฑ์อ้างอิง
+  if (!budgetFiscalYearBE) {
+    const refDate = bill.paymentDate ? new Date(bill.paymentDate) : new Date();
+    const refYearBE = refDate.getFullYear() + 543;
+    budgetFiscalYearBE =
+      refDate.getMonth() >= 9 ? refYearBE + 1 : refYearBE;
+  }
+
+  // 3) เปรียบเทียบปีงบประมาณของรอบบิล กับ ปีงบประมาณที่ใช้เบิกจ่าย
+  if (billFiscalYearBE < budgetFiscalYearBE) {
+    // นำบิลของปีงบประมาณก่อนหน้ามาเบิกจ่ายในปีงบประมาณนี้
+    // อนุญาตเฉพาะรอบบิลเดือน สิงหาคม (เดือน 8) และ กันยายน (เดือน 9) เท่านั้น
     if (bill.billingMonth !== 8 && bill.billingMonth !== 9) {
       isWrongMonth = true;
     }
+  } else if (billFiscalYearBE > budgetFiscalYearBE) {
+    // นำบิลของปีงบประมาณอนาคตมาเบิกด้วยงบปีก่อนหน้า
+    isWrongMonth = true;
   }
 
   // 6. ตรวจสอบค่าโทรศัพท์: ใช้ค่าโทรศัพท์เกินเกณฑ์ และ เบิกค่าโทรศัพท์เกินเกณฑ์
@@ -213,6 +255,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
   // For now, assume false unless manually flagged.
 
   // 8. เบิกจ่ายซ้ำ (ตรวจจากเลขที่ใบแจ้งหนี้ที่ซ้ำกัน ในประเภทสาธารณูปโภคและหน่วยงานเดียวกัน)
+  // ให้ขึ้นเฉพาะรายการของ "เดือนหลัง" (หรือรายการที่สร้างทีหลัง) เท่านั้น รายการแรกจะไม่ขึ้นซ้ำซ้อน
   if (
     bill.invoiceNumber &&
     bill.invoiceNumber.trim() !== "" &&
@@ -229,7 +272,83 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
         ),
       );
     if (duplicates.length > 1) {
-      isDuplicate = true;
+      // เรียงลำดับเพื่อหาบิลรายการแรกสุด (เดือนก่อนหน้า หรือสร้างก่อนหน้า)
+      duplicates.sort((a, b) => {
+        const timeA = (a.billingYear || 0) * 12 + (a.billingMonth || 0);
+        const timeB = (b.billingYear || 0) * 12 + (b.billingMonth || 0);
+        if (timeA !== timeB) return timeA - timeB;
+
+        const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (createdA !== createdB) return createdA - createdB;
+
+        return a.id.localeCompare(b.id);
+      });
+
+      const earliestBill = duplicates[0];
+      // ถ้าบิลปัจจุบันไม่ใช่รายการแรกสุด -> เป็นบิลเดือนหลังที่เบิกจ่ายซ้ำ
+      if (bill.id !== earliestBill.id) {
+        isDuplicate = true;
+      }
+
+      // ตรวจสอบและอัพเดทบิลอื่นในกลุ่มเดียวกันด้วย เพื่อให้รายการแรกถูกปลดสถานะซ้ำซ้อน
+      if (checkOthers) {
+        for (const other of duplicates) {
+          if (other.id !== bill.id) {
+            runAuditChecks(other.id, currentUserId, false).catch(console.error);
+          }
+        }
+      }
+    }
+  }
+
+  // 9. ค่าใช้จ่ายเพิ่มขึ้นผิดปกติ (> 30% เทียบกับรอบบิลเดือนก่อนหน้าของหมายเลขบริการ/หน่วยงานเดียวกัน)
+  let isAnomalyExpense = false;
+  const currentBillAmount = Number(bill.invoiceAmount || bill.paidAmount || 0);
+  if (currentBillAmount > 0 && bill.billingMonth && bill.billingYear) {
+    const prevMonth = bill.billingMonth === 1 ? 12 : bill.billingMonth - 1;
+    const prevYear =
+      bill.billingMonth === 1 ? bill.billingYear - 1 : bill.billingYear;
+
+    const prevBills = await db
+      .select()
+      .from(utilityBills)
+      .where(
+        and(
+          eq(utilityBills.departmentId, bill.departmentId),
+          eq(utilityBills.utilityType, bill.utilityType),
+          eq(utilityBills.billingMonth, prevMonth),
+          eq(utilityBills.billingYear, prevYear),
+        ),
+      );
+
+    let prevAmount = 0;
+    if (bill.serviceNumber) {
+      const currentNumbers = bill.serviceNumber
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const matchingPrevBill = prevBills.find((pb) => {
+        if (!pb.serviceNumber) return false;
+        const pbNumbers = pb.serviceNumber
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return currentNumbers.some((num) => pbNumbers.includes(num));
+      });
+      if (matchingPrevBill) {
+        prevAmount = Number(
+          matchingPrevBill.invoiceAmount || matchingPrevBill.paidAmount || 0,
+        );
+      }
+    } else if (prevBills.length > 0) {
+      prevAmount = Number(
+        prevBills[0].invoiceAmount || prevBills[0].paidAmount || 0,
+      );
+    }
+
+    if (prevAmount > 0 && currentBillAmount > prevAmount * 1.3) {
+      isAnomalyExpense = true;
     }
   }
 
@@ -252,6 +371,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
     isPhoneUsageOverLimit ||
     isWrongBudget ||
     isDuplicate ||
+    isAnomalyExpense ||
     isManualAnomaly;
 
   if (hasIssues) {
@@ -268,6 +388,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
           isPhoneUsageOverLimit,
           isWrongBudget,
           isDuplicate,
+          isAnomalyExpense,
           status: "PENDING_CORRECTION",
           updatedAt: new Date(),
         })
@@ -286,6 +407,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
         isPhoneUsageOverLimit,
         isWrongBudget,
         isDuplicate,
+        isAnomalyExpense,
         isManualAnomaly,
         manualAnomalyReason,
         status: "PENDING_CORRECTION",
@@ -307,6 +429,7 @@ export async function runAuditChecks(billId: string, currentUserId: string) {
           isPhoneUsageOverLimit: false,
           isWrongBudget: false,
           isDuplicate: false,
+          isAnomalyExpense: false,
           status: "CORRECTED",
           updatedAt: new Date(),
         })
@@ -432,7 +555,8 @@ export async function unflagManualAnomaly(billId: string) {
         existingAudit.isPhoneOverLimit ||
         existingAudit.isPhoneUsageOverLimit ||
         existingAudit.isWrongBudget ||
-        existingAudit.isDuplicate;
+        existingAudit.isDuplicate ||
+        existingAudit.isAnomalyExpense;
 
       await db
         .update(audits)

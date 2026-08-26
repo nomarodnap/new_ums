@@ -32,7 +32,7 @@ import {
   MoreHorizontal,
   Search,
   Eye,
-  Edit,
+  RefreshCw,
   Trash2,
   FileText,
   Building2,
@@ -132,6 +132,7 @@ type Bill = {
   isPhoneUsageOverLimit?: boolean | null;
   isWrongBudget?: boolean | null;
   isDuplicate?: boolean | null;
+  isAnomalyExpense?: boolean | null;
   isManualAnomaly?: boolean | null;
   manualAnomalyReason?: string | null;
   isReviewed?: boolean | null;
@@ -183,6 +184,7 @@ export function BillsTable({
     if (bill.isPhoneOverLimit) issues.push("เบิกค่าโทรศัพท์เกินเกณฑ์");
     if (bill.isWrongBudget) issues.push("เบิกจ่ายผิดงบประมาณ");
     if (bill.isDuplicate) issues.push("เบิกจ่ายซ้ำซ้อน");
+    if (bill.isAnomalyExpense) issues.push("ค่าใช้จ่ายสูงผิดปกติ");
     if (bill.isManualAnomaly)
       issues.push(bill.manualAnomalyReason || "ระบุว่าผิดปกติ");
     return issues;
@@ -723,11 +725,66 @@ export function BillsTable({
                         >
                           <Eye className="mr-2 h-4 w-4" /> ดูรายละเอียด
                         </DropdownMenuItem>
+                        {[
+                          "admin",
+                          "auditor",
+                          "strategy_finance",
+                          "central_staff",
+                        ].includes(userRole || "") &&
+                          (bill.isReviewed ? (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-amber-600 focus:text-amber-600"
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const res = await markBillAsReviewed(
+                                    bill.id,
+                                    false,
+                                  );
+                                  if (res.success) {
+                                    toast.success(
+                                      "ยกเลิกการตรวจรับรองเรียบร้อยแล้ว",
+                                    );
+                                    router.refresh();
+                                  } else {
+                                    toast.error(
+                                      res.error || "ไม่สามารถยกเลิกได้",
+                                    );
+                                  }
+                                });
+                              }}
+                            >
+                              <Clock className="mr-2 h-4 w-4" /> ยกเลิกการตรวจรับรอง
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-emerald-600 focus:text-emerald-600"
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const res = await markBillAsReviewed(
+                                    bill.id,
+                                    true,
+                                  );
+                                  if (res.success) {
+                                    toast.success(
+                                      "บันทึกการตรวจสอบเรียบร้อยแล้ว",
+                                    );
+                                    router.refresh();
+                                  } else {
+                                    toast.error(
+                                      res.error || "ไม่สามารถบันทึกได้",
+                                    );
+                                  }
+                                });
+                              }}
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" /> ตรวจเรียบร้อยแล้ว
+                            </DropdownMenuItem>
+                          ))}
                         <DropdownMenuItem
                           className="cursor-pointer"
                           render={<Link href={`/bills/${bill.id}/edit`} />}
                         >
-                          <Edit className="mr-2 h-4 w-4" /> อัพเดทข้อมูล
+                          <RefreshCw className="mr-2 h-4 w-4" /> อัพเดทข้อมูล
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -1512,8 +1569,6 @@ export function BillsTable({
                 "strategy_finance",
                 "central_staff",
               ].includes(userRole || "") &&
-              (!billToView.auditStatus ||
-                billToView.auditStatus === "CORRECTED") &&
               (billToView.isReviewed ? (
                 <Button
                   variant="outline"
@@ -1565,7 +1620,7 @@ export function BillsTable({
                 href={`/bills/${billToView.id}/edit`}
                 className={buttonVariants({ variant: "default" })}
               >
-                <Edit className="mr-2 h-4 w-4" /> อัพเดทข้อมูลบิลนี้
+                <RefreshCw className="mr-2 h-4 w-4" /> อัพเดทข้อมูลบิลนี้
               </Link>
             )}
           </div>

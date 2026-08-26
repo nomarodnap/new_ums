@@ -148,7 +148,7 @@ export function NotificationList({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold tracking-tight text-foreground">{title}</h2>
-              {unreadCount > 0 && (
+              {scope !== "all" && unreadCount > 0 && (
                 <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-xs font-bold shadow-xs">
                   {unreadCount} ใหม่
                 </Badge>

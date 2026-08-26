@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import { resolveAudit } from "@/server/actions/audits";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { FileUploadDropzone } from "@/components/ui/file-upload-dropzone";
 
 export function ResolveAuditForm({ auditId }: { auditId: string }) {
   const [state, formAction, isPending] = useActionState(resolveAudit, null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   return (
     <form noValidate action={formAction} className="space-y-4 mt-6">
@@ -38,13 +39,15 @@ export function ResolveAuditForm({ auditId }: { auditId: string }) {
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="attachment">แนบเอกสารหลักฐาน (PDF, JPG)</Label>
-            <Input id="attachment" name="attachment" type="file" />
-            <p className="text-xs text-muted-foreground">
-              เช่น หนังสือขออนุมัติอธิบดี, หลักฐานการเรียกเงินคืน
-            </p>
-          </div>
+          <FileUploadDropzone
+            id="attachment"
+            name="attachment"
+            label="แนบเอกสารหลักฐาน (PDF, JPG)"
+            hint="เช่น หนังสือขออนุมัติอธิบดี, หลักฐานการเรียกเงินคืน"
+            value={attachmentFile}
+            onChange={setAttachmentFile}
+            accept=".pdf,image/*"
+          />
 
           <Button type="submit" disabled={isPending} className="mt-2">
             {isPending ? "กำลังบันทึก..." : "ยืนยันการแก้ไข (Mark as Corrected)"}

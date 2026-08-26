@@ -811,6 +811,9 @@ export async function updateBill(prevState: any, formData: FormData) {
       paidAmount: parsed.data.paidAmount?.toString(),
       isPendingBillOnly: parsed.data.disbursingType === "หน่วยงานฝากเบิก",
       depositUnitId: parsed.data.depositUnitId,
+      isReviewed: false,
+      reviewedBy: null,
+      reviewedAt: null,
       updatedAt: new Date(),
     };
 
@@ -839,7 +842,9 @@ export async function updateBill(prevState: any, formData: FormData) {
       billId: parsed.data.billId,
       userId: session.user.id,
       action: "UPDATED",
-      details: "แก้ไขข้อมูลบิลทั่วไป",
+      details: existingBill.isReviewed
+        ? "แก้ไขข้อมูลบิล (รีเซ็ตสถานะการตรวจสอบเป็นยังไม่ได้ตรวจสอบ)"
+        : "แก้ไขข้อมูลบิลทั่วไป",
     });
 
     // Re-run audit checks after update

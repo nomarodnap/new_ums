@@ -61,7 +61,6 @@ const navMain = [
     url: "/all-notifications",
     icon: BellRing,
     onlyAdmin: true,
-    badgeKey: "allSystemUnreadCount",
   },
   {
     title: "รายการค่าใช้จ่าย",

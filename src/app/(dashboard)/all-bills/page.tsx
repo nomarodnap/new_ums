@@ -67,6 +67,7 @@ export default async function AllBillsPage() {
         isPhoneUsageOverLimit: audits.isPhoneUsageOverLimit,
         isWrongBudget: audits.isWrongBudget,
         isDuplicate: audits.isDuplicate,
+        isAnomalyExpense: audits.isAnomalyExpense,
         isManualAnomaly: audits.isManualAnomaly,
         manualAnomalyReason: audits.manualAnomalyReason,
         isReviewed: utilityBills.isReviewed,

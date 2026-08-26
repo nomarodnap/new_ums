@@ -202,6 +202,7 @@ export const audits = pgTable("audits", {
   isPhoneUsageOverLimit: boolean("is_phone_usage_over_limit").default(false),
   isWrongBudget: boolean("is_wrong_budget").default(false),
   isDuplicate: boolean("is_duplicate").default(false),
+  isAnomalyExpense: boolean("is_anomaly_expense").default(false),
   isManualAnomaly: boolean("is_manual_anomaly").default(false),
 
   status: text("status").notNull().default("PENDING_CORRECTION"), // PENDING_CORRECTION, CORRECTED

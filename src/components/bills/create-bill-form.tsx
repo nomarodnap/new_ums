@@ -36,9 +36,13 @@ import {
   Banknote,
   AlertCircle,
   FileText,
+  Gauge,
+  MapPin,
 } from "lucide-react";
 import { DepartmentServicesSheet } from "@/app/(dashboard)/departments/department-services-sheet";
 import { DepartmentCombobox } from "@/components/ui/department-combobox";
+import { FileUploadDropzone } from "@/components/ui/file-upload-dropzone";
+import { ServiceNumberPresets } from "@/components/bills/service-number-presets";
 import { cn } from "@/lib/utils";
 
 type Department = {
@@ -622,130 +626,200 @@ export function CreateBillForm({
                 <ErrorSpeechBubble message={fieldErrors?.utilityType} />
               </div>
 
-              <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.serviceNumber}>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="serviceNumber">
-                    หมายเลขผู้ใช้ / รหัสเครื่องวัด{" "}
-                    <span className="text-destructive">*</span>
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-[11px] font-medium border-orange-500/30 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:border-orange-500/50 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/50 shadow-xs transition-all"
-                    disabled={!selectedDeptData}
-                    onClick={() => setServicesSheetOpen(true)}
-                  >
-                    จัดการหมายเลขผู้ใช้
-                  </Button>
+              {/* Redesigned Service Number Section */}
+              <div
+                className="md:col-span-2 rounded-2xl border bg-muted/20 dark:bg-muted/10 p-4.5 space-y-4 relative transition-all shadow-2xs"
+                data-has-error={!!fieldErrors?.serviceNumber}
+              >
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Gauge className="size-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="serviceNumber" className="font-semibold text-sm">
+                          หมายเลขผู้ใช้ / รหัสเครื่องวัด
+                        </Label>
+                        <span className="text-destructive font-bold">*</span>
+                        {selectedServiceNumbers.length > 0 && (
+                          <Badge variant="secondary" className="text-[11px] px-2 py-0 h-5 font-medium bg-primary/15 text-primary border-primary/20">
+                            เลือกแล้ว {selectedServiceNumbers.length} หมายเลข
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        สามารถเลือกได้หลายหมายเลขสำหรับบิลที่ชำระรวมกัน
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <ServiceNumberPresets
+                      departmentId={selectedDept}
+                      utilityType={selectedUtility}
+                      availableServices={utilityServices}
+                      currentSelected={selectedServiceNumbers}
+                      onApplyPreset={(numbers) => {
+                        setSelectedServiceNumbers(numbers);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs font-medium border-orange-500/30 bg-orange-50/80 text-orange-600 hover:bg-orange-100 hover:border-orange-500/50 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/50 shadow-2xs transition-all gap-1.5 rounded-lg"
+                      disabled={!selectedDeptData}
+                      onClick={() => setServicesSheetOpen(true)}
+                    >
+                      <Settings className="size-3.5" />
+                      <span>จัดการหมายเลข</span>
+                    </Button>
+                  </div>
                 </div>
-                <Select
-                  value=""
-                  onValueChange={addServiceNumber}
-                  disabled={!selectedUtility || utilityServices.length === 0}
-                >
-                  <SelectTrigger
-                    className={
-                      !selectedUtility || utilityServices.length === 0
-                        ? "bg-muted cursor-not-allowed"
-                        : fieldErrors?.serviceNumber
-                          ? "border-rose-500 ring-2 ring-rose-500/20"
-                          : ""
-                    }
+
+                {/* Selection Dropdown */}
+                <div className="space-y-2">
+                  <Select
+                    value=""
+                    onValueChange={addServiceNumber}
+                    disabled={!selectedUtility || utilityServices.length === 0}
                   >
-                    <SelectValue
-                      placeholder={
-                        !selectedUtility
-                          ? "กรุณาเลือกประเภทสาธารณูปโภคก่อน"
-                          : utilityServices.length === 0
-                            ? "ไม่พบหมายเลขในระบบ"
-                            : "เพิ่มหมายเลขผู้ใช้..."
-                      }
-                    ></SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {utilityServices
-                      .filter(
-                        (svc) =>
-                          !selectedServiceNumbers.includes(svc.serviceNumber),
-                      )
-                      .map((svc) => (
-                        <SelectItem
-                          key={svc.id}
-                          value={svc.serviceNumber}
-                          label={svc.serviceNumber}
-                        >
-                          {svc.serviceNumber}{" "}
-                          {svc.provider ? `(${svc.provider})` : ""}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      className={cn(
+                        "h-10 bg-background shadow-2xs text-xs sm:text-sm rounded-xl",
+                        !selectedUtility || utilityServices.length === 0
+                          ? "bg-muted cursor-not-allowed opacity-60"
+                          : fieldErrors?.serviceNumber
+                            ? "border-rose-500 ring-2 ring-rose-500/20"
+                            : ""
+                      )}
+                    >
+                      <SelectValue
+                        placeholder={
+                          !selectedUtility
+                            ? "⚠️ กรุณาเลือกประเภทสาธารณูปโภคด้านบนก่อน"
+                            : utilityServices.length === 0
+                              ? "ไม่พบหมายเลขผู้ใช้ในระบบ (กดปุ่มจัดการหมายเลขเพื่อเพิ่ม)"
+                              : "+ ค้นหาและคลิกเพื่อเลือกหมายเลขผู้ใช้ / รหัสเครื่องวัด..."
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {utilityServices
+                        .filter((svc) => !selectedServiceNumbers.includes(svc.serviceNumber))
+                        .map((svc) => (
+                          <SelectItem
+                            key={svc.id}
+                            value={svc.serviceNumber}
+                            label={svc.serviceNumber}
+                            className="py-2"
+                          >
+                            <div className="flex items-center justify-between gap-3 w-full">
+                              <span className="font-mono font-semibold text-xs text-foreground">
+                                {svc.serviceNumber}
+                              </span>
+                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                {svc.provider && <span>({svc.provider})</span>}
+                                {svc.locationType && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    {svc.locationType}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
 
-                <input
-                  type="hidden"
-                  name="serviceNumber"
-                  value={selectedServiceNumbers.join(", ")}
-                />
-                <input
-                  type="hidden"
-                  name="serviceBreakdown"
-                  value={JSON.stringify(serviceAmounts)}
-                />
+                  <input
+                    type="hidden"
+                    name="serviceNumber"
+                    value={selectedServiceNumbers.join(", ")}
+                  />
+                  <input
+                    type="hidden"
+                    name="serviceBreakdown"
+                    value={JSON.stringify(serviceAmounts)}
+                  />
+                  <ErrorSpeechBubble message={fieldErrors?.serviceNumber} />
+                </div>
 
-                {selectedServiceNumbers.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedServiceNumbers.map((sn) => (
-                      <Badge
-                        key={sn}
-                        variant="secondary"
-                        className="flex items-center gap-1 px-3 py-1 text-sm"
-                      >
-                        {sn}
+                {/* Selected Numbers List Chips */}
+                {selectedServiceNumbers.length > 0 ? (
+                  <div className="p-3 rounded-xl bg-background/90 border shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground text-[11px]">
+                        หมายเลขที่เลือก ({selectedServiceNumbers.length}):
+                      </span>
+                      {selectedServiceNumbers.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeServiceNumber(sn)}
-                          className="text-muted-foreground hover:text-destructive ml-1"
+                          onClick={() => {
+                            setSelectedServiceNumbers([]);
+                            setServiceAmounts({});
+                          }}
+                          className="text-[11px] text-muted-foreground hover:text-destructive transition-colors underline"
                         >
-                          <X className="h-3 w-3" />
+                          ล้างทั้งหมด
                         </button>
-                      </Badge>
-                    ))}
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedServiceNumbers.map((sn) => {
+                        const svc = utilityServices.find((s) => s.serviceNumber === sn);
+                        return (
+                          <div
+                            key={sn}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary/10 border border-primary/20 text-foreground shadow-2xs"
+                          >
+                            <span className="font-mono font-medium">{sn}</span>
+                            {svc?.provider && (
+                              <span className="text-[10px] text-muted-foreground">
+                                ({svc.provider})
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeServiceNumber(sn)}
+                              className="size-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-0.5"
+                              title="ลบหมายเลขนี้"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-2.5 px-4 rounded-xl border border-dashed bg-muted/20 text-center text-xs text-muted-foreground">
+                    ยังไม่ได้เลือกหมายเลข (คลิกที่ช่องด้านบนเพื่อเลือกหมายเลข)
                   </div>
                 )}
 
-                <ErrorSpeechBubble message={fieldErrors?.serviceNumber} />
-                <p className="text-xs text-muted-foreground mt-1">
-                  สามารถเลือกได้หลายหมายเลข (ในกรณีที่ชำระบิลรวมกัน)
-                </p>
-              </div>
+                {/* Detected Metadata Summary (Provider & Location) */}
+                <div className="pt-2.5 border-t flex items-center justify-between flex-wrap gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-muted-foreground" />
+                    <span>ผู้ให้บริการ:</span>
+                    <span className="font-medium text-foreground">
+                      {provider || "ตรวจจับอัตโนมัติจากหมายเลขที่เลือก"}
+                    </span>
+                    <input type="hidden" name="provider" value={provider} />
+                  </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="provider">ผู้ให้บริการ</Label>
-                <Input
-                  type="text"
-                  id="provider"
-                  name="provider"
-                  value={provider}
-                  onChange={() => {}}
-                  readOnly
-                  className="bg-muted cursor-not-allowed"
-                  placeholder="เลือกหมายเลขผู้ใช้ก่อน"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="locationType">ที่ตั้ง</Label>
-                <Input
-                  type="text"
-                  id="locationType"
-                  name="locationType"
-                  value={selectedLocation}
-                  onChange={() => {}}
-                  readOnly
-                  className="bg-muted cursor-not-allowed"
-                  placeholder="เลือกหมายเลขผู้ใช้ก่อน"
-                />
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="size-3.5 text-muted-foreground" />
+                    <span>ที่ตั้ง:</span>
+                    <span className="font-medium text-foreground">
+                      {selectedLocation || "ตรวจจับอัตโนมัติจากหมายเลขที่เลือก"}
+                    </span>
+                    <input type="hidden" name="locationType" value={selectedLocation} />
+                  </div>
+                </div>
               </div>
 
               <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.billingMonth}>
@@ -857,37 +931,39 @@ export function CreateBillForm({
                     <ErrorSpeechBubble message={fieldErrors?.receivedDate} />
                   </div>
 
-                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.sentToDisbursingDate}>
-                    <Label htmlFor="sentToDisbursingDate">
-                      หน่วยฝากเบิกส่งเอกสาร
-                    </Label>
-                    <DatePickerBE
-                      id="sentToDisbursingDate"
-                      name="sentToDisbursingDate"
-                      required={false}
-                      value={sentToDisbursingDate}
-                      onChange={(_, str) => setSentToDisbursingDate(str)}
-                      disabled={disbursingType !== "หน่วยงานฝากเบิก"}
-                      className={fieldErrors?.sentToDisbursingDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
-                    />
-                    <ErrorSpeechBubble message={fieldErrors?.sentToDisbursingDate} />
-                  </div>
+                  {disbursingType === "หน่วยงานฝากเบิก" && (
+                    <>
+                      <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.sentToDisbursingDate}>
+                        <Label htmlFor="sentToDisbursingDate">
+                          หน่วยฝากเบิกส่งเอกสาร
+                        </Label>
+                        <DatePickerBE
+                          id="sentToDisbursingDate"
+                          name="sentToDisbursingDate"
+                          required={false}
+                          value={sentToDisbursingDate}
+                          onChange={(_, str) => setSentToDisbursingDate(str)}
+                          className={fieldErrors?.sentToDisbursingDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                        />
+                        <ErrorSpeechBubble message={fieldErrors?.sentToDisbursingDate} />
+                      </div>
 
-                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.disbursingReceivedDate}>
-                    <Label htmlFor="disbursingReceivedDate">
-                      วันที่หน่วยเบิกจ่ายลงรับใบแจ้งหนี้
-                    </Label>
-                    <DatePickerBE
-                      id="disbursingReceivedDate"
-                      name="disbursingReceivedDate"
-                      required={false}
-                      value={disbursingReceivedDate}
-                      onChange={(_, str) => setDisbursingReceivedDate(str)}
-                      disabled={disbursingType !== "หน่วยงานฝากเบิก"}
-                      className={fieldErrors?.disbursingReceivedDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
-                    />
-                    <ErrorSpeechBubble message={fieldErrors?.disbursingReceivedDate} />
-                  </div>
+                      <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.disbursingReceivedDate}>
+                        <Label htmlFor="disbursingReceivedDate">
+                          วันที่หน่วยเบิกจ่ายลงรับใบแจ้งหนี้
+                        </Label>
+                        <DatePickerBE
+                          id="disbursingReceivedDate"
+                          name="disbursingReceivedDate"
+                          required={false}
+                          value={disbursingReceivedDate}
+                          onChange={(_, str) => setDisbursingReceivedDate(str)}
+                          className={fieldErrors?.disbursingReceivedDate ? "border-rose-500 ring-2 ring-rose-500/20" : ""}
+                        />
+                        <ErrorSpeechBubble message={fieldErrors?.disbursingReceivedDate} />
+                      </div>
+                    </>
+                  )}
 
                   {/* Breakdown by Service Number */}
                   <div className="md:col-span-2 space-y-3 rounded-xl border bg-muted/20 p-4">
@@ -998,45 +1074,31 @@ export function CreateBillForm({
                     <ErrorSpeechBubble message={fieldErrors?.amountBaht} />
                   </div>
 
-                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.unitsUsed}>
-                    <Label htmlFor="unitsUsed">
-                      ปริมาณการใช้ (kWh / m³){" "}
-                      {(selectedUtility === "ค่าไฟฟ้า" ||
-                        selectedUtility === "ค่าประปา&น้ำบาดาล") && (
+                  {(selectedUtility === "ค่าไฟฟ้า" ||
+                    selectedUtility === "ค่าประปา&น้ำบาดาล") && (
+                    <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.unitsUsed}>
+                      <Label htmlFor="unitsUsed">
+                        ปริมาณการใช้ (kWh / m³){" "}
                         <span className="text-destructive">*</span>
-                      )}
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      id="unitsUsed"
-                      name="unitsUsed"
-                      value={unitsUsed}
-                      onChange={(e) => setUnitsUsed(e.target.value)}
-                      placeholder="0.00"
-                      required={
-                        selectedUtility === "ค่าไฟฟ้า" ||
-                        selectedUtility === "ค่าประปา&น้ำบาดาล"
-                      }
-                      disabled={
-                        !(
-                          selectedUtility === "ค่าไฟฟ้า" ||
-                          selectedUtility === "ค่าประปา&น้ำบาดาล"
-                        )
-                      }
-                      className={
-                        !(
-                          selectedUtility === "ค่าไฟฟ้า" ||
-                          selectedUtility === "ค่าประปา&น้ำบาดาล"
-                        )
-                          ? "bg-muted cursor-not-allowed"
-                          : fieldErrors?.unitsUsed
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        id="unitsUsed"
+                        name="unitsUsed"
+                        value={unitsUsed}
+                        onChange={(e) => setUnitsUsed(e.target.value)}
+                        placeholder="0.00"
+                        required
+                        className={
+                          fieldErrors?.unitsUsed
                             ? "border-rose-500 ring-2 ring-rose-500/20"
                             : ""
-                      }
-                    />
-                    <ErrorSpeechBubble message={fieldErrors?.unitsUsed} />
-                  </div>
+                        }
+                      />
+                      <ErrorSpeechBubble message={fieldErrors?.unitsUsed} />
+                    </div>
+                  )}
 
                   <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.documentRef}>
                     <Label htmlFor="documentRef">
@@ -1056,45 +1118,16 @@ export function CreateBillForm({
                     <ErrorSpeechBubble message={fieldErrors?.documentRef} />
                   </div>
 
-                  <div className="grid gap-2 relative" data-has-error={!!fieldErrors?.attachmentInvoice}>
-                    <Label htmlFor="attachmentInvoice">
-                      เอกสารใบแจ้งหนี้ <span className="text-destructive">*</span>
-                    </Label>
-                    {selectedInvoiceFile ? (
-                      <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
-                            {selectedInvoiceFile.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            ({(selectedInvoiceFile.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedInvoiceFile(null)}
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
-                        >
-                          <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
-                        </Button>
-                      </div>
-                    ) : (
-                      <Input
-                        type="file"
-                        id="attachmentInvoice"
-                        name="attachmentInvoice"
-                        accept=".pdf,image/*"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) setSelectedInvoiceFile(e.target.files[0]);
-                        }}
-                        className={cn("cursor-pointer", fieldErrors?.attachmentInvoice ? "border-rose-500 ring-2 ring-rose-500/20" : "")}
-                      />
-                    )}
-                    <ErrorSpeechBubble message={fieldErrors?.attachmentInvoice} />
-                  </div>
+                  <FileUploadDropzone
+                    id="attachmentInvoice"
+                    name="attachmentInvoice"
+                    label="เอกสารใบแจ้งหนี้"
+                    required
+                    accept=".pdf,image/*"
+                    value={selectedInvoiceFile}
+                    onChange={setSelectedInvoiceFile}
+                    errorMessage={fieldErrors?.attachmentInvoice}
+                  />
                 </div>
               )}
             </div>
@@ -1361,99 +1394,27 @@ export function CreateBillForm({
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="grid gap-2 bg-background p-3 rounded-xl border border-dashed relative" data-has-error={!!fieldErrors?.attachmentReceipt}>
-                        <Label
-                          htmlFor="attachmentReceipt"
-                          className="font-medium"
-                        >
-                          ใบเสร็จรับเงิน{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        {selectedReceiptFile ? (
-                          <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
-                            <div className="flex items-center gap-2 min-w-0 pr-2">
-                              <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                              <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
-                                {selectedReceiptFile.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                ({(selectedReceiptFile.size / 1024).toFixed(1)} KB)
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedReceiptFile(null)}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
-                            >
-                              <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
-                            </Button>
-                          </div>
-                        ) : (
-                          <Input
-                            type="file"
-                            id="attachmentReceipt"
-                            name="attachmentReceipt"
-                            accept="image/*,.pdf"
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) setSelectedReceiptFile(e.target.files[0]);
-                            }}
-                            className={cn(
-                              "cursor-pointer file:cursor-pointer text-xs",
-                              fieldErrors?.attachmentReceipt ? "border-rose-500 ring-2 ring-rose-500/20" : ""
-                            )}
-                          />
-                        )}
-                        <ErrorSpeechBubble message={fieldErrors?.attachmentReceipt} />
-                      </div>
+                      <FileUploadDropzone
+                        id="attachmentReceipt"
+                        name="attachmentReceipt"
+                        label="ใบเสร็จรับเงิน"
+                        required
+                        accept="image/*,.pdf"
+                        value={selectedReceiptFile}
+                        onChange={setSelectedReceiptFile}
+                        errorMessage={fieldErrors?.attachmentReceipt}
+                      />
 
-                      <div className="grid gap-2 bg-background p-3 rounded-xl border border-dashed relative" data-has-error={!!fieldErrors?.attachmentDirectPayment}>
-                        <Label
-                          htmlFor="attachmentDirectPayment"
-                          className="font-medium"
-                        >
-                          รายงานจ่ายตรง / รายงาน KTB{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        {selectedDirectPaymentFile ? (
-                          <div className="flex items-center justify-between p-2.5 px-3 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 dark:border-emerald-800/40 text-sm shadow-2xs">
-                            <div className="flex items-center gap-2 min-w-0 pr-2">
-                              <FileText className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                              <span className="font-medium text-emerald-900 dark:text-emerald-200 truncate">
-                                {selectedDirectPaymentFile.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                ({(selectedDirectPaymentFile.size / 1024).toFixed(1)} KB)
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedDirectPaymentFile(null)}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0"
-                            >
-                              <X className="size-3.5 mr-1" /> เปลี่ยนไฟล์
-                            </Button>
-                          </div>
-                        ) : (
-                          <Input
-                            type="file"
-                            id="attachmentDirectPayment"
-                            name="attachmentDirectPayment"
-                            accept="image/*,.pdf"
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) setSelectedDirectPaymentFile(e.target.files[0]);
-                            }}
-                            className={cn(
-                              "cursor-pointer file:cursor-pointer text-xs",
-                              fieldErrors?.attachmentDirectPayment ? "border-rose-500 ring-2 ring-rose-500/20" : ""
-                            )}
-                          />
-                        )}
-                        <ErrorSpeechBubble message={fieldErrors?.attachmentDirectPayment} />
-                      </div>
+                      <FileUploadDropzone
+                        id="attachmentDirectPayment"
+                        name="attachmentDirectPayment"
+                        label="รายงานจ่ายตรง / รายงาน KTB"
+                        required
+                        accept="image/*,.pdf"
+                        value={selectedDirectPaymentFile}
+                        onChange={setSelectedDirectPaymentFile}
+                        errorMessage={fieldErrors?.attachmentDirectPayment}
+                      />
                     </div>
                   </div>
                 </>
