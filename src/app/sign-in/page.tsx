@@ -107,15 +107,15 @@ export default function SignInPage() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-xs font-semibold text-foreground tracking-wide">
+              <div className="flex items-center justify-between gap-1.5">
+                <label htmlFor="password" className="text-xs font-semibold text-foreground tracking-wide shrink-0">
                   รหัสผ่าน
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-primary hover:underline font-medium"
+                  className="text-[11px] sm:text-xs text-primary hover:underline font-medium text-right transition-colors"
                 >
-                  ลืมรหัสผ่าน?
+                  ตั้งรหัสผ่านครั้งแรก / เปลี่ยนรหัสผ่าน / ลืมรหัสผ่าน
                 </Link>
               </div>
               <div className="relative">
@@ -165,7 +165,7 @@ export default function SignInPage() {
                   href="/forgot-password"
                   className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80"
                 >
-                  "ลืมรหัสผ่าน?"
+                  "ตั้งรหัสผ่านครั้งแรก / เปลี่ยนรหัสผ่าน / ลืมรหัสผ่าน"
                 </Link>{" "}
                 และกรอกอีเมลที่หน่วยงานของท่านได้ส่งให้ทางกลุ่มตรวจสอบภายใน (กตน.) เพื่อตั้งรหัสผ่านใหม่สำหรับการเข้าใช้งาน
               </p>

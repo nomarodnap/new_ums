@@ -44,3 +44,6 @@ next-env.d.ts
 /public/uploads/*
 !/public/uploads/.gitkeep
 
+# Sub-projects
+go_ums/
+
